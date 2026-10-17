@@ -73,7 +73,7 @@ func Run(ctx context.Context, cfg Config) error {
 	if err != nil {
 		return err
 	}
-	defer ledgerConn.Close()
+	defer func() { _ = ledgerConn.Close() }()
 	service := orders.New(pool, grpcLedger{ledgerv1.NewLedgerServiceClient(ledgerConn)}, markets, orders.Config{MaxOpenPerMarket: cfg.MaxOpenPerMarket})
 
 	brokers := kafka.Brokers(cfg.KafkaBrokers)
@@ -225,7 +225,7 @@ func (v *server) ListOrders(ctx context.Context, r *ordersv1.ListOrdersRequest) 
 func (v *server) ListMarkets(context.Context, *ordersv1.ListMarketsRequest) (*ordersv1.ListMarketsResponse, error) {
 	out := &ordersv1.ListMarketsResponse{}
 	for _, m := range v.markets.All() {
-		out.Markets = append(out.Markets, m.Spec.ToProto())
+		out.Markets = append(out.Markets, m.ToProto())
 	}
 	return out, nil
 }
@@ -238,5 +238,5 @@ func (v *server) SetMarketStatus(ctx context.Context, r *ordersv1.SetMarketStatu
 	if err != nil {
 		return nil, mapErr(err)
 	}
-	return &ordersv1.SetMarketStatusResponse{Market: mi.Spec.ToProto()}, nil
+	return &ordersv1.SetMarketStatusResponse{Market: mi.ToProto()}, nil
 }

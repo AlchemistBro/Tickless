@@ -329,3 +329,32 @@ func TestRandomOperationsPreserveInvariants(t *testing.T) {
 	}
 	assert.NotEmpty(t, applied, "scenario must have produced trades")
 }
+
+// SPEC §6.1 and §6.2 are enforced by the database itself, so even a bug or a
+// manual SQL session cannot create an unbalanced entry or a negative balance.
+func TestDatabaseRejectsUnbalancedEntriesAndNegativeBalances(t *testing.T) {
+	s, pool, ctx := newStore(t)
+	_, _, err := s.Credit(ctx, "seed", 1, "USDT", usdt("10"))
+	require.NoError(t, err)
+
+	var availID int64
+	require.NoError(t, pool.QueryRow(ctx, `SELECT id FROM accounts WHERE user_id = 1 AND kind = 'AVAILABLE'`).Scan(&availID))
+
+	// An entry whose postings do not sum to zero cannot be committed.
+	tx, err := pool.Begin(ctx)
+	require.NoError(t, err)
+	var entry int64
+	require.NoError(t, tx.QueryRow(ctx, `INSERT INTO journal_entries (business_key, kind) VALUES ('rogue', 'rogue') RETURNING id`).Scan(&entry))
+	_, err = tx.Exec(ctx, `INSERT INTO postings (entry_id, account_id, asset, amount) VALUES ($1, $2, 'USDT', 5)`, entry, availID)
+	require.NoError(t, err)
+	err = tx.Commit(ctx)
+	require.Error(t, err, "unbalanced journal entry must be rejected at commit")
+	assert.True(t, pg.IsCode(err, pg.CodeCheckViolation), "got: %v", err)
+
+	// A balance can never go negative (except EXTERNAL).
+	_, err = pool.Exec(ctx, `UPDATE balances SET amount = -1 WHERE account_id = $1`, availID)
+	require.Error(t, err)
+	assert.True(t, pg.IsCode(err, pg.CodeCheckViolation))
+
+	require.NoError(t, s.Verify(ctx))
+}

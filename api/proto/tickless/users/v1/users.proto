@@ -4,18 +4,22 @@ package tickless.users.v1;
 
 import "tickless/common/v1/common.proto";
 
-// Events on users.events (key: user id).
-
-message UserSignedUp {
+// UserEvent is the single message type of the users.events topic (key: user id).
+message UserEvent {
   tickless.common.v1.EventMeta meta = 1;
   int64 user_id = 2;
-  string email = 3;
+  oneof event {
+    UserSignedUp signed_up = 3;
+    UserFrozen frozen = 4;
+  }
+}
+
+message UserSignedUp {
+  string email = 1;
   // Opaque email verification token; consumed by the notifier to build the link.
-  string verification_token = 4;
+  string verification_token = 2;
 }
 
 message UserFrozen {
-  tickless.common.v1.EventMeta meta = 1;
-  int64 user_id = 2;
-  bool frozen = 3;
+  bool frozen = 1;
 }

@@ -6,7 +6,7 @@ MODULES := $(shell sed -n 's|^\s*\./\(.*\)$$|\1|p; s|^use \./\(.*\)$$|\1|p' go.w
 HAS_CC := $(shell command -v gcc >/dev/null 2>&1 && echo 1)
 GO_IMAGE := golang:1.27
 
-.PHONY: help test test-race lint proto up down logs ps fuzz bench
+.PHONY: help test test-integration lint proto up down logs ps fuzz bench e2e chaos-dup
 
 help:
 	@grep -E '^[a-z-]+:' Makefile | cut -d: -f1 | tr '\n' ' '; echo
@@ -20,9 +20,13 @@ else
 		bash -c 'for m in $(MODULES); do echo "== $$m"; (cd $$m && go test -race -cover ./...) || exit 1; done'
 endif
 
+# Integration tests start throwaway PostgreSQL/Kafka containers (testcontainers); they need Docker
+# access, so they run on the host rather than inside the -race container.
+test-integration:
+	@for m in $(MODULES); do echo "== integration $$m"; (cd $$m && go test -tags integration -cover -count=1 -timeout 15m ./...) || exit 1; done
+
 lint:
-	@for m in $(MODULES); do echo "== golangci-lint $$m"; (cd $$m && golangci-lint run ./...) || exit 1; done
-	buf lint
+	@rc=0; for m in $(MODULES); do echo "== golangci-lint $$m"; (cd $$m && golangci-lint run ./...) || rc=1; done; 	 buf lint || rc=1; exit $$rc
 
 proto:
 	buf generate
@@ -46,6 +50,17 @@ up:
 	bash scripts/wait-up.sh
 	@echo; echo "Grafana http://localhost:3000 (admin/admin)  Jaeger http://localhost:16686"
 	@echo "Prometheus http://localhost:9090  Mailpit http://localhost:8025  RabbitMQ http://localhost:15672 (tickless/tickless)"
+
+# Black-box end-to-end suite against a running `make up` stack.
+e2e:
+	cd e2e && go test -tags e2e -count=1 -timeout 15m -v ./...
+
+# Chaos: every Kafka message is published twice by every producer; the same trading scenarios must
+# still end with identical balances and intact ledger invariants (SPEC §7).
+chaos-dup:
+	$(COMPOSE) down -v
+	CHAOS_DUPLICATE_PUBLISH=true "$(MAKE)" up
+	cd e2e && E2E_EXPECT_DUPLICATES=true go test -tags e2e -count=1 -timeout 15m -v -run 'TestTradeFlow|TestOrderTypesReleaseHolds' ./... ; rc=$$?; cd .. ; $(COMPOSE) down -v; exit $$rc
 
 down:
 	$(COMPOSE) down -v

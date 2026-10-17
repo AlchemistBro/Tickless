@@ -1,0 +1,520 @@
+openapi: 3.0.3
+info:
+  title: Tickless public API
+  version: 0.3.0
+  description: |
+    REST API of the Tickless spot exchange (local/regtest deployments only).
+
+    **Money is always a decimal string** in whole units of the asset
+    (e.g. `"0.5"` BTC, `"50000.25"` USDT) - never a JSON number.
+
+    **Authentication**
+    * Session: `Authorization: Bearer <access_token>` from `/v1/auth/login`.
+    * API key (bots): headers `X-API-KEY`, `X-API-TIMESTAMP` (unix seconds) and
+      `X-API-SIGNATURE = hex(HMAC-SHA256(secret, ts "\n" METHOD "\n" path+query "\n" hex(SHA256(body))))`.
+      Timestamps more than 30 s off are rejected.
+
+    **Idempotency**: send `Idempotency-Key` on any POST/DELETE; a replay returns the first
+    response (`Idempotent-Replayed: true`). Orders are additionally idempotent by `client_order_id`.
+
+    **Rate limits** return `429` with `Retry-After`.
+servers:
+  - url: http://localhost:8080
+security:
+  - bearer: []
+  - apiKey: []
+    apiTimestamp: []
+    apiSignature: []
+paths:
+  /healthz:
+    get:
+      operationId: healthz
+      security: []
+      summary: Liveness
+      responses:
+        '200': {description: ok, content: {text/plain: {schema: {type: string}}}}
+  /readyz:
+    get:
+      operationId: readyz
+      security: []
+      summary: Readiness (Redis reachable)
+      responses:
+        '200': {description: ok, content: {text/plain: {schema: {type: string}}}}
+        '503': {$ref: '#/components/responses/Error'}
+  /v1/markets:
+    get:
+      operationId: listMarkets
+      security: []
+      summary: List markets
+      responses:
+        '200':
+          description: Markets
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [markets]
+                properties:
+                  markets: {type: array, items: {$ref: '#/components/schemas/Market'}}
+  /v1/auth/signup:
+    post:
+      operationId: signup
+      security: []
+      summary: Create an account (email verification required before login)
+      requestBody: {$ref: '#/components/requestBodies/Credentials'}
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user_id]
+                properties: {user_id: {type: string}}
+        '400': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+        '429': {$ref: '#/components/responses/Error'}
+  /v1/auth/verify-email:
+    post:
+      operationId: verifyEmail
+      security: []
+      summary: Confirm an email address with the emailed token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              additionalProperties: false
+              properties: {token: {type: string}}
+      responses:
+        '204': {description: Verified}
+        '401': {$ref: '#/components/responses/Error'}
+        '429': {$ref: '#/components/responses/Error'}
+  /v1/auth/login:
+    post:
+      operationId: login
+      security: []
+      summary: Exchange credentials for an access and refresh token
+      requestBody: {$ref: '#/components/requestBodies/Credentials'}
+      responses:
+        '200': {$ref: '#/components/responses/Tokens'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '429': {$ref: '#/components/responses/Error'}
+  /v1/auth/refresh:
+    post:
+      operationId: refresh
+      security: []
+      summary: Rotate the refresh token and get a new access token
+      requestBody: {$ref: '#/components/requestBodies/RefreshToken'}
+      responses:
+        '200': {$ref: '#/components/responses/Tokens'}
+        '401': {$ref: '#/components/responses/Error'}
+        '429': {$ref: '#/components/responses/Error'}
+  /v1/auth/logout:
+    post:
+      operationId: logout
+      security: []
+      summary: Revoke a refresh token
+      requestBody: {$ref: '#/components/requestBodies/RefreshToken'}
+      responses:
+        '204': {description: Logged out}
+        '429': {$ref: '#/components/responses/Error'}
+  /v1/balances:
+    get:
+      operationId: getBalances
+      summary: Available and held balance per asset
+      responses:
+        '200':
+          description: Balances
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [balances]
+                properties:
+                  balances: {type: array, items: {$ref: '#/components/schemas/Balance'}}
+        '401': {$ref: '#/components/responses/Error'}
+  /v1/ledger:
+    get:
+      operationId: getLedger
+      summary: Ledger movements of the caller, newest first
+      parameters:
+        - {name: asset, in: query, schema: {type: string}}
+        - {name: before_id, in: query, schema: {type: string}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 500}}
+      responses:
+        '200': {$ref: '#/components/responses/Entries'}
+        '401': {$ref: '#/components/responses/Error'}
+  /v1/orders:
+    get:
+      operationId: listOrders
+      summary: List own orders, newest first
+      parameters:
+        - {name: market, in: query, schema: {type: string}}
+        - {name: open, in: query, schema: {type: boolean}}
+        - {name: before_id, in: query, schema: {type: string}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 500}}
+      responses:
+        '200':
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [orders]
+                properties:
+                  orders: {type: array, items: {$ref: '#/components/schemas/Order'}}
+        '401': {$ref: '#/components/responses/Error'}
+    post:
+      operationId: placeOrder
+      summary: Place an order
+      description: |
+        Limit and market orders. Market buys need `price` as a protective bound (the
+        maximum price you accept); funds are reserved for `quantity * price`.
+        Returns 200 with the original order when `client_order_id` was already used.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PlaceOrder'}
+      responses:
+        '201': {description: Order accepted, content: {application/json: {schema: {$ref: '#/components/schemas/Order'}}}}
+        '200': {description: Duplicate client_order_id - existing order, content: {application/json: {schema: {$ref: '#/components/schemas/Order'}}}}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+        '429': {$ref: '#/components/responses/Error'}
+        '503': {$ref: '#/components/responses/Error'}
+    delete:
+      operationId: cancelAllOrders
+      summary: Request cancellation of all open orders (optionally one market)
+      parameters:
+        - {name: market, in: query, schema: {type: string}}
+      responses:
+        '202':
+          description: Cancellation requested
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [cancel_requested]
+                properties: {cancel_requested: {type: integer}}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+  /v1/orders/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string}}
+    get:
+      operationId: getOrder
+      summary: Get one of your orders
+      responses:
+        '200': {description: Order, content: {application/json: {schema: {$ref: '#/components/schemas/Order'}}}}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+    delete:
+      operationId: cancelOrder
+      summary: Request cancellation of an order
+      description: Asynchronous - the order becomes `cancelled` once the matching engine confirms.
+      responses:
+        '202': {description: Cancellation requested, content: {application/json: {schema: {$ref: '#/components/schemas/Order'}}}}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /v1/api-keys:
+    get:
+      operationId: listApiKeys
+      summary: List API keys (session only)
+      responses:
+        '200':
+          description: Keys
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [keys]
+                properties: {keys: {type: array, items: {$ref: '#/components/schemas/ApiKey'}}}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+    post:
+      operationId: createApiKey
+      summary: Create an API key; the secret is returned once (session only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                label: {type: string, maxLength: 64}
+                can_trade: {type: boolean}
+      responses:
+        '201': {description: Created, content: {application/json: {schema: {$ref: '#/components/schemas/ApiKey'}}}}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+  /v1/api-keys/{keyId}:
+    delete:
+      operationId: revokeApiKey
+      summary: Revoke an API key (session only)
+      parameters:
+        - {name: keyId, in: path, required: true, schema: {type: string}}
+      responses:
+        '204': {description: Revoked}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /v1/admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [admin]
+      summary: List users
+      parameters:
+        - {name: after_id, in: query, schema: {type: string}}
+        - {name: limit, in: query, schema: {type: integer}}
+      responses:
+        '200':
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [users]
+                properties: {users: {type: array, items: {$ref: '#/components/schemas/User'}}}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+  /v1/admin/users/{id}/freeze:
+    post:
+      operationId: adminFreezeUser
+      tags: [admin]
+      summary: Freeze a user (revokes sessions, blocks login and trading)
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses:
+        '204': {description: Frozen}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /v1/admin/users/{id}/unfreeze:
+    post:
+      operationId: adminUnfreezeUser
+      tags: [admin]
+      summary: Unfreeze a user
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses:
+        '204': {description: Unfrozen}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /v1/admin/users/{id}/balances:
+    get:
+      operationId: adminUserBalances
+      tags: [admin]
+      summary: Balances of any user
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses:
+        '200':
+          description: Balances
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [balances]
+                properties: {balances: {type: array, items: {$ref: '#/components/schemas/Balance'}}}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+  /v1/admin/users/{id}/ledger:
+    get:
+      operationId: adminUserLedger
+      tags: [admin]
+      summary: Ledger of any user
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - {name: asset, in: query, schema: {type: string}}
+        - {name: before_id, in: query, schema: {type: string}}
+        - {name: limit, in: query, schema: {type: integer}}
+      responses:
+        '200': {$ref: '#/components/responses/Entries'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+  /v1/admin/markets/{symbol}/halt:
+    post:
+      operationId: adminHaltMarket
+      tags: [admin]
+      summary: Halt a market (new orders rejected, cancels allowed)
+      parameters: [{name: symbol, in: path, required: true, schema: {type: string}}]
+      responses:
+        '200': {description: Market, content: {application/json: {schema: {$ref: '#/components/schemas/Market'}}}}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /v1/admin/markets/{symbol}/resume:
+    post:
+      operationId: adminResumeMarket
+      tags: [admin]
+      summary: Resume a halted market
+      parameters: [{name: symbol, in: path, required: true, schema: {type: string}}]
+      responses:
+        '200': {description: Market, content: {application/json: {schema: {$ref: '#/components/schemas/Market'}}}}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+components:
+  securitySchemes:
+    bearer: {type: http, scheme: bearer, bearerFormat: JWT}
+    apiKey: {type: apiKey, in: header, name: X-API-KEY}
+    apiTimestamp: {type: apiKey, in: header, name: X-API-TIMESTAMP}
+    apiSignature: {type: apiKey, in: header, name: X-API-SIGNATURE}
+  requestBodies:
+    Credentials:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [email, password]
+            additionalProperties: false
+            properties:
+              email: {type: string, format: email, maxLength: 254}
+              password: {type: string, minLength: 10, maxLength: 128}
+    RefreshToken:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [refresh_token]
+            additionalProperties: false
+            properties: {refresh_token: {type: string}}
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Tokens:
+      description: Tokens
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Tokens'}
+    Entries:
+      description: Ledger entries
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [entries]
+            properties: {entries: {type: array, items: {$ref: '#/components/schemas/LedgerEntry'}}}
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string, description: Stable machine readable code}
+            message: {type: string}
+    Tokens:
+      type: object
+      required: [access_token, access_expires_at, refresh_token, refresh_expires_at]
+      properties:
+        access_token: {type: string}
+        access_expires_at: {type: string, format: date-time}
+        refresh_token: {type: string}
+        refresh_expires_at: {type: string, format: date-time}
+    Market:
+      type: object
+      required: [symbol, base_asset, quote_asset, tick_size, lot_size, min_notional, maker_fee_bps, taker_fee_bps, status]
+      properties:
+        symbol: {type: string, example: BTC-USDT}
+        base_asset: {type: string}
+        quote_asset: {type: string}
+        tick_size: {type: string, description: Price step in quote units}
+        lot_size: {type: string, description: Quantity step in base units}
+        min_notional: {type: string, description: Minimum order value in quote units}
+        maker_fee_bps: {type: integer}
+        taker_fee_bps: {type: integer}
+        status: {type: string, enum: [active, halted]}
+    Balance:
+      type: object
+      required: [asset, available, held]
+      properties:
+        asset: {type: string}
+        available: {type: string}
+        held: {type: string}
+    PlaceOrder:
+      type: object
+      required: [market, side, type, quantity]
+      additionalProperties: false
+      properties:
+        market: {type: string, example: BTC-USDT}
+        side: {type: string, enum: [buy, sell]}
+        type: {type: string, enum: [limit, market]}
+        time_in_force: {type: string, enum: [GTC, IOC, FOK]}
+        post_only: {type: boolean}
+        price: {type: string, example: "50000.25"}
+        quantity: {type: string, example: "0.5"}
+        client_order_id: {type: string, maxLength: 64}
+    Order:
+      type: object
+      required: [id, market, side, type, time_in_force, post_only, quantity, filled_quantity, status, created_at, updated_at]
+      properties:
+        id: {type: string}
+        market: {type: string}
+        side: {type: string, enum: [buy, sell]}
+        type: {type: string, enum: [limit, market]}
+        time_in_force: {type: string}
+        post_only: {type: boolean}
+        price: {type: string}
+        quantity: {type: string}
+        filled_quantity: {type: string}
+        status: {type: string, enum: [pending_hold, new, partially_filled, filled, cancelled, rejected]}
+        client_order_id: {type: string}
+        reject_reason: {type: string}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    LedgerEntry:
+      type: object
+      required: [id, reference, kind, created_at, postings]
+      properties:
+        id: {type: string}
+        reference: {type: string}
+        kind: {type: string}
+        created_at: {type: string, format: date-time}
+        postings:
+          type: array
+          items:
+            type: object
+            required: [asset, account, amount]
+            properties:
+              asset: {type: string}
+              account: {type: string}
+              amount: {type: string}
+    ApiKey:
+      type: object
+      required: [key_id, label, can_trade, created_at, revoked]
+      properties:
+        key_id: {type: string}
+        label: {type: string}
+        can_trade: {type: boolean}
+        created_at: {type: string, format: date-time}
+        revoked: {type: boolean}
+        secret: {type: string, description: Only present in the creation response}
+    User:
+      type: object
+      required: [id, email, role, email_verified, frozen, created_at]
+      properties:
+        id: {type: string}
+        email: {type: string}
+        role: {type: string, enum: [user, admin]}
+        email_verified: {type: boolean}
+        frozen: {type: boolean}
+        created_at: {type: string, format: date-time}

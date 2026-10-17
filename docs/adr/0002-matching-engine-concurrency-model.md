@@ -6,7 +6,7 @@ Status: accepted (Phase 2)
 Matching must be deterministic (same command stream => same events, SPEC §6.6), fast (≥ 1M cmd/s, p99 < 20 µs, 0 allocs/op after warm-up) and simple enough to reason about. Locks, atomics and scheduler non-determinism work against all three.
 
 ## Decision
-- **One goroutine owns one market** (`engine.Engine` is not safe for concurrent use and contains no locks). Parallelism comes from running many markets, each pinned to a Kafka partition (`matching.commands` is partitioned by market).
+- **One goroutine owns each market** (`engine.Engine` is not safe for concurrent use and contains no locks). In the matching service the unit of ownership is the Kafka partition: markets are hashed to partitions by key, a partition's single worker goroutine owns every engine whose market maps to it, and a market never spans goroutines. This lets one checkpoint cover a consistent offset for all markets of the partition (ADR 0003). Parallelism comes from running many partitions.
 - **Pure state machine:** `Process(cmd, out) out`. Time arrives inside the command (stamped upstream), the engine never reads a clock, never iterates a Go `map`, and has no randomness. All output goes to a caller-owned, reusable slice.
 - **Integers only:** `int64` price ticks / quantity lots (ADR 0001). Market orders are IOC/FOK orders with an optional protective price bound (0 = unbounded); this lets the `orders` service reserve a bounded quote amount for market buys.
 - **Book structure:** each side is a slice of price levels sorted by `key` (price for bids, -price for asks) so the **best level is the last element**; each level holds an intrusive doubly-linked FIFO of orders. Cancel is O(1) via an **order index** (open addressing, linear probing, backward-shift delete → no tombstones, no allocation on churn). Orders and levels come from slab pools.
@@ -20,7 +20,7 @@ Activity concentrates at the touch, so inserting/removing levels at the tail mov
 
 Measured (docs/perf/engine/bench.txt, Linux, Core Ultra 7 155H): mixed workload with ~20k resting orders: **~165-180 ns/command (≈6M cmd/s), p99 ≈ 0.5 µs, 0 allocs**. The pathological case — **100,000 levels per side with uniformly random depth inserts — costs ~30 µs per add+cancel pair**, i.e. it would miss the p99 target.
 
-Mitigation: the `orders` service will enforce a price band around the last/mid price (Phase 3), bounding the number of live levels. If real books ever need unbounded depth, the level container is isolated in `book.go` and can be swapped for a B-tree without touching matching logic; the model-based test suite (`model_test.go`) guards such a change.
+Mitigation (implemented in Phase 3, ADR 0006): the `orders` service enforces a +-50% price band around the last trade price, a minimum notional and a per-user open-order cap, which bounds the number of live levels an attacker can create. If real books ever need unbounded depth, the level container is isolated in `book.go` and can be swapped for a B-tree without touching matching logic; the model-based test suite (`model_test.go`) guards such a change.
 
 ## Alternatives considered
 - `map[uint64]*order` for the index: Go maps may allocate on churn and are slower; they also invite non-deterministic iteration.

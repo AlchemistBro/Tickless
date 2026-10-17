@@ -2,6 +2,7 @@ package orders
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -98,7 +99,7 @@ func (s *Service) applyOne(ctx context.Context, tx pgx.Tx, ev *matchingv1.Event)
 func (s *Service) retryCancel(ctx context.Context, tx pgx.Tx, ev *matchingv1.Event) error {
 	o, err := scanOrder(tx.QueryRow(ctx, `SELECT `+orderCols+` FROM orders WHERE id = $1 FOR UPDATE`, int64(ev.OrderId)))
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
 		return err

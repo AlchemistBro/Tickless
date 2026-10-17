@@ -22,20 +22,117 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type UserSignedUp struct {
+// UserEvent is the single message type of the users.events topic (key: user id).
+type UserEvent struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Meta   *v1.EventMeta          `protobuf:"bytes,1,opt,name=meta,proto3" json:"meta,omitempty"`
 	UserId int64                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Email  string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
+	// Types that are valid to be assigned to Event:
+	//
+	//	*UserEvent_SignedUp
+	//	*UserEvent_Frozen
+	Event         isUserEvent_Event `protobuf_oneof:"event"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UserEvent) Reset() {
+	*x = UserEvent{}
+	mi := &file_tickless_users_v1_users_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserEvent) ProtoMessage() {}
+
+func (x *UserEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_users_v1_users_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserEvent.ProtoReflect.Descriptor instead.
+func (*UserEvent) Descriptor() ([]byte, []int) {
+	return file_tickless_users_v1_users_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *UserEvent) GetMeta() *v1.EventMeta {
+	if x != nil {
+		return x.Meta
+	}
+	return nil
+}
+
+func (x *UserEvent) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *UserEvent) GetEvent() isUserEvent_Event {
+	if x != nil {
+		return x.Event
+	}
+	return nil
+}
+
+func (x *UserEvent) GetSignedUp() *UserSignedUp {
+	if x != nil {
+		if x, ok := x.Event.(*UserEvent_SignedUp); ok {
+			return x.SignedUp
+		}
+	}
+	return nil
+}
+
+func (x *UserEvent) GetFrozen() *UserFrozen {
+	if x != nil {
+		if x, ok := x.Event.(*UserEvent_Frozen); ok {
+			return x.Frozen
+		}
+	}
+	return nil
+}
+
+type isUserEvent_Event interface {
+	isUserEvent_Event()
+}
+
+type UserEvent_SignedUp struct {
+	SignedUp *UserSignedUp `protobuf:"bytes,3,opt,name=signed_up,json=signedUp,proto3,oneof"`
+}
+
+type UserEvent_Frozen struct {
+	Frozen *UserFrozen `protobuf:"bytes,4,opt,name=frozen,proto3,oneof"`
+}
+
+func (*UserEvent_SignedUp) isUserEvent_Event() {}
+
+func (*UserEvent_Frozen) isUserEvent_Event() {}
+
+type UserSignedUp struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Email string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
 	// Opaque email verification token; consumed by the notifier to build the link.
-	VerificationToken string `protobuf:"bytes,4,opt,name=verification_token,json=verificationToken,proto3" json:"verification_token,omitempty"`
+	VerificationToken string `protobuf:"bytes,2,opt,name=verification_token,json=verificationToken,proto3" json:"verification_token,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
 
 func (x *UserSignedUp) Reset() {
 	*x = UserSignedUp{}
-	mi := &file_tickless_users_v1_users_proto_msgTypes[0]
+	mi := &file_tickless_users_v1_users_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -47,7 +144,7 @@ func (x *UserSignedUp) String() string {
 func (*UserSignedUp) ProtoMessage() {}
 
 func (x *UserSignedUp) ProtoReflect() protoreflect.Message {
-	mi := &file_tickless_users_v1_users_proto_msgTypes[0]
+	mi := &file_tickless_users_v1_users_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -60,21 +157,7 @@ func (x *UserSignedUp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserSignedUp.ProtoReflect.Descriptor instead.
 func (*UserSignedUp) Descriptor() ([]byte, []int) {
-	return file_tickless_users_v1_users_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *UserSignedUp) GetMeta() *v1.EventMeta {
-	if x != nil {
-		return x.Meta
-	}
-	return nil
-}
-
-func (x *UserSignedUp) GetUserId() int64 {
-	if x != nil {
-		return x.UserId
-	}
-	return 0
+	return file_tickless_users_v1_users_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *UserSignedUp) GetEmail() string {
@@ -93,16 +176,14 @@ func (x *UserSignedUp) GetVerificationToken() string {
 
 type UserFrozen struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Meta          *v1.EventMeta          `protobuf:"bytes,1,opt,name=meta,proto3" json:"meta,omitempty"`
-	UserId        int64                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Frozen        bool                   `protobuf:"varint,3,opt,name=frozen,proto3" json:"frozen,omitempty"`
+	Frozen        bool                   `protobuf:"varint,1,opt,name=frozen,proto3" json:"frozen,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UserFrozen) Reset() {
 	*x = UserFrozen{}
-	mi := &file_tickless_users_v1_users_proto_msgTypes[1]
+	mi := &file_tickless_users_v1_users_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -114,7 +195,7 @@ func (x *UserFrozen) String() string {
 func (*UserFrozen) ProtoMessage() {}
 
 func (x *UserFrozen) ProtoReflect() protoreflect.Message {
-	mi := &file_tickless_users_v1_users_proto_msgTypes[1]
+	mi := &file_tickless_users_v1_users_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -127,21 +208,7 @@ func (x *UserFrozen) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserFrozen.ProtoReflect.Descriptor instead.
 func (*UserFrozen) Descriptor() ([]byte, []int) {
-	return file_tickless_users_v1_users_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *UserFrozen) GetMeta() *v1.EventMeta {
-	if x != nil {
-		return x.Meta
-	}
-	return nil
-}
-
-func (x *UserFrozen) GetUserId() int64 {
-	if x != nil {
-		return x.UserId
-	}
-	return 0
+	return file_tickless_users_v1_users_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *UserFrozen) GetFrozen() bool {
@@ -155,17 +222,19 @@ var File_tickless_users_v1_users_proto protoreflect.FileDescriptor
 
 const file_tickless_users_v1_users_proto_rawDesc = "" +
 	"\n" +
-	"\x1dtickless/users/v1/users.proto\x12\x11tickless.users.v1\x1a\x1ftickless/common/v1/common.proto\"\x9f\x01\n" +
-	"\fUserSignedUp\x121\n" +
+	"\x1dtickless/users/v1/users.proto\x12\x11tickless.users.v1\x1a\x1ftickless/common/v1/common.proto\"\xd9\x01\n" +
+	"\tUserEvent\x121\n" +
 	"\x04meta\x18\x01 \x01(\v2\x1d.tickless.common.v1.EventMetaR\x04meta\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\x03R\x06userId\x12\x14\n" +
-	"\x05email\x18\x03 \x01(\tR\x05email\x12-\n" +
-	"\x12verification_token\x18\x04 \x01(\tR\x11verificationToken\"p\n" +
+	"\auser_id\x18\x02 \x01(\x03R\x06userId\x12>\n" +
+	"\tsigned_up\x18\x03 \x01(\v2\x1f.tickless.users.v1.UserSignedUpH\x00R\bsignedUp\x127\n" +
+	"\x06frozen\x18\x04 \x01(\v2\x1d.tickless.users.v1.UserFrozenH\x00R\x06frozenB\a\n" +
+	"\x05event\"S\n" +
+	"\fUserSignedUp\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\x12-\n" +
+	"\x12verification_token\x18\x02 \x01(\tR\x11verificationToken\"$\n" +
 	"\n" +
-	"UserFrozen\x121\n" +
-	"\x04meta\x18\x01 \x01(\v2\x1d.tickless.common.v1.EventMetaR\x04meta\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\x03R\x06userId\x12\x16\n" +
-	"\x06frozen\x18\x03 \x01(\bR\x06frozenB\xc0\x01\n" +
+	"UserFrozen\x12\x16\n" +
+	"\x06frozen\x18\x01 \x01(\bR\x06frozenB\xc0\x01\n" +
 	"\x15com.tickless.users.v1B\n" +
 	"UsersProtoP\x01Z5github.com/tickless/pkg/gen/tickless/users/v1;usersv1\xa2\x02\x03TUX\xaa\x02\x11Tickless.Users.V1\xca\x02\x11Tickless\\Users\\V1\xe2\x02\x1dTickless\\Users\\V1\\GPBMetadata\xea\x02\x13Tickless::Users::V1b\x06proto3"
 
@@ -181,20 +250,22 @@ func file_tickless_users_v1_users_proto_rawDescGZIP() []byte {
 	return file_tickless_users_v1_users_proto_rawDescData
 }
 
-var file_tickless_users_v1_users_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_tickless_users_v1_users_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_tickless_users_v1_users_proto_goTypes = []any{
-	(*UserSignedUp)(nil), // 0: tickless.users.v1.UserSignedUp
-	(*UserFrozen)(nil),   // 1: tickless.users.v1.UserFrozen
-	(*v1.EventMeta)(nil), // 2: tickless.common.v1.EventMeta
+	(*UserEvent)(nil),    // 0: tickless.users.v1.UserEvent
+	(*UserSignedUp)(nil), // 1: tickless.users.v1.UserSignedUp
+	(*UserFrozen)(nil),   // 2: tickless.users.v1.UserFrozen
+	(*v1.EventMeta)(nil), // 3: tickless.common.v1.EventMeta
 }
 var file_tickless_users_v1_users_proto_depIdxs = []int32{
-	2, // 0: tickless.users.v1.UserSignedUp.meta:type_name -> tickless.common.v1.EventMeta
-	2, // 1: tickless.users.v1.UserFrozen.meta:type_name -> tickless.common.v1.EventMeta
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	3, // 0: tickless.users.v1.UserEvent.meta:type_name -> tickless.common.v1.EventMeta
+	1, // 1: tickless.users.v1.UserEvent.signed_up:type_name -> tickless.users.v1.UserSignedUp
+	2, // 2: tickless.users.v1.UserEvent.frozen:type_name -> tickless.users.v1.UserFrozen
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_tickless_users_v1_users_proto_init() }
@@ -202,13 +273,17 @@ func file_tickless_users_v1_users_proto_init() {
 	if File_tickless_users_v1_users_proto != nil {
 		return
 	}
+	file_tickless_users_v1_users_proto_msgTypes[0].OneofWrappers = []any{
+		(*UserEvent_SignedUp)(nil),
+		(*UserEvent_Frozen)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tickless_users_v1_users_proto_rawDesc), len(file_tickless_users_v1_users_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

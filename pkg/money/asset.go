@@ -26,6 +26,15 @@ var (
 	USDT = Asset{Symbol: "USDT", Decimals: 6}
 )
 
+// Assets lists the assets known to the exchange by symbol.
+var Assets = map[string]Asset{"BTC": BTC, "ETH": ETH, "USDT": USDT}
+
+// LookupAsset returns a known asset by symbol.
+func LookupAsset(symbol string) (Asset, bool) {
+	a, ok := Assets[symbol]
+	return a, ok
+}
+
 func pow10(n uint8) *big.Int {
 	return new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(n)), nil)
 }

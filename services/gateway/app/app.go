@@ -1,0 +1,163 @@
+// Package app wires the gateway: REST edge, Redis, gRPC clients and the
+// users.events consumer that keeps the frozen-user set current.
+package app
+
+import (
+	"context"
+	"crypto/ed25519"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/redis/go-redis/v9"
+	"github.com/twmb/franz-go/pkg/kgo"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/proto"
+
+	"github.com/tickless/gateway/internal/httpapi"
+	identityv1 "github.com/tickless/pkg/gen/tickless/identity/v1"
+	ledgerv1 "github.com/tickless/pkg/gen/tickless/ledger/v1"
+	ordersv1 "github.com/tickless/pkg/gen/tickless/orders/v1"
+	usersv1 "github.com/tickless/pkg/gen/tickless/users/v1"
+	"github.com/tickless/pkg/kafka"
+	"github.com/tickless/pkg/otelx"
+	"github.com/tickless/pkg/svc"
+)
+
+// Config is the gateway configuration.
+type Config struct {
+	HTTPAddr, AdminAddr                  string
+	IdentityAddr, LedgerAddr, OrdersAddr string
+	RedisAddr                            string
+	KafkaBrokers                         string
+	AllowedOrigins                       []string
+	TrustProxy                           bool
+	Limits                               httpapi.Limits
+}
+
+// ConfigFromEnv reads the configuration from environment variables.
+func ConfigFromEnv() Config {
+	l := httpapi.DefaultLimits
+	l.IPRate = float64(svc.EnvInt("RATE_IP_PER_SEC", int(l.IPRate)))
+	l.IPBurst = l.IPRate * 2
+	l.UserRate = float64(svc.EnvInt("RATE_USER_PER_SEC", int(l.UserRate)))
+	l.UserBurst = l.UserRate * 2
+	l.OrderRate = float64(svc.EnvInt("RATE_ORDER_PER_SEC", int(l.OrderRate)))
+	l.OrderBurst = l.OrderRate * 2
+	l.AuthBurst = float64(svc.EnvInt("RATE_AUTH_BURST", int(l.AuthBurst)))
+	var origins []string
+	for _, o := range strings.Split(svc.Env("CORS_ALLOWED_ORIGINS", ""), ",") {
+		if o = strings.TrimSpace(o); o != "" {
+			origins = append(origins, o)
+		}
+	}
+	return Config{
+		HTTPAddr: svc.Env("HTTP_ADDR", ":8080"), AdminAddr: svc.Env("ADMIN_ADDR", ":9205"),
+		IdentityAddr: svc.Env("IDENTITY_ADDR", "localhost:9103"), LedgerAddr: svc.Env("LEDGER_ADDR", "localhost:9101"),
+		OrdersAddr: svc.Env("ORDERS_ADDR", "localhost:9102"), RedisAddr: svc.Env("REDIS_ADDR", "localhost:6379"),
+		KafkaBrokers: svc.Env("KAFKA_BROKERS", "localhost:9092"), AllowedOrigins: origins,
+		TrustProxy: svc.EnvBool("TRUST_PROXY", false), Limits: l,
+	}
+}
+
+// Run starts the gateway and blocks until ctx is cancelled.
+func Run(ctx context.Context, cfg Config) error {
+	shutdown, err := otelx.Setup(ctx, "gateway")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = shutdown(context.Background()) }()
+
+	rdb := redis.NewClient(&redis.Options{Addr: cfg.RedisAddr})
+	defer func() { _ = rdb.Close() }()
+
+	idConn, err := svc.Dial(cfg.IdentityAddr)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = idConn.Close() }()
+	ledgerConn, err := svc.Dial(cfg.LedgerAddr)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = ledgerConn.Close() }()
+	ordersConn, err := svc.Dial(cfg.OrdersAddr)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = ordersConn.Close() }()
+	identity := identityv1.NewIdentityServiceClient(idConn)
+
+	api := httpapi.New(httpapi.Deps{
+		Identity: identity, Ledger: ledgerv1.NewLedgerServiceClient(ledgerConn), Orders: ordersv1.NewOrdersServiceClient(ordersConn),
+		Redis: rdb, Limits: cfg.Limits, AllowedOrigins: cfg.AllowedOrigins, TrustProxy: cfg.TrustProxy,
+		PublicKey: func(ctx context.Context) (ed25519.PublicKey, error) {
+			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			defer cancel()
+			r, err := identity.GetPublicKey(ctx, &identityv1.GetPublicKeyRequest{})
+			if err != nil {
+				return nil, err
+			}
+			return ed25519.PublicKey(r.Ed25519PublicKey), nil
+		},
+	})
+	srv := &http.Server{
+		Addr: cfg.HTTPAddr, Handler: otelhttp.NewHandler(api.Routes(), "gateway",
+			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string { return r.Method + " " + r.URL.Path })),
+		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 2 * time.Minute,
+		MaxHeaderBytes: 16 << 10,
+	}
+	svc.ServeAdmin(ctx, cfg.AdminAddr, func(ctx context.Context) error { return rdb.Ping(ctx).Err() })
+
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		slog.Info("http listening", "addr", cfg.HTTPAddr)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
+		return nil
+	})
+	g.Go(func() error {
+		<-gctx.Done()
+		sctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		return srv.Shutdown(sctx)
+	})
+	g.Go(func() error {
+		// Unique group per instance so that every gateway sees every freeze event.
+		group := fmt.Sprintf("gateway-frozen-%d", time.Now().UnixNano())
+		err := kafka.Consume(gctx, kafka.ConsumerConfig{Brokers: kafka.Brokers(cfg.KafkaBrokers), Group: group, Topics: []string{"users.events"}},
+			func(ctx context.Context, recs []*kgo.Record) error {
+				for _, r := range recs {
+					var ev usersv1.UserEvent
+					if err := proto.Unmarshal(r.Value, &ev); err != nil {
+						slog.Error("dropping undecodable user event", "offset", r.Offset, "err", err)
+						continue
+					}
+					if f := ev.GetFrozen(); f != nil {
+						if err := applyFrozen(ctx, rdb, ev.UserId, f.Frozen); err != nil {
+							return err
+						}
+					}
+				}
+				return nil
+			})
+		if errors.Is(err, context.Canceled) {
+			return nil
+		}
+		return err
+	})
+	return g.Wait()
+}
+
+func applyFrozen(ctx context.Context, rdb redis.Cmdable, userID int64, frozen bool) error {
+	id := fmt.Sprint(userID)
+	if frozen {
+		return rdb.SAdd(ctx, httpapi.FrozenSet, id).Err()
+	}
+	return rdb.SRem(ctx, httpapi.FrozenSet, id).Err()
+}

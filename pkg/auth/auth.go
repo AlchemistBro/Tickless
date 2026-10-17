@@ -105,7 +105,7 @@ func (v *Verifier) Verify(token string, now time.Time) (Claims, error) {
 func SignRequest(secret string, ts int64, method, pathQuery string, body []byte) string {
 	bh := sha256.Sum256(body)
 	m := hmac.New(sha256.New, []byte(secret))
-	fmt.Fprintf(m, "%d\n%s\n%s\n%s", ts, method, pathQuery, hex.EncodeToString(bh[:]))
+	_, _ = fmt.Fprintf(m, "%d\n%s\n%s\n%s", ts, method, pathQuery, hex.EncodeToString(bh[:]))
 	return hex.EncodeToString(m.Sum(nil))
 }
 

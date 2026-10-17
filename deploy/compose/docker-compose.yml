@@ -4,6 +4,13 @@ name: tickless
 x-restart: &restart
   restart: unless-stopped
 
+x-app-env: &app-env
+  KAFKA_BROKERS: kafka:29092
+  GRPC_ENABLE_TXT_SERVICE_CONFIG: "false"   # skip grpc-go's DNS TXT lookup, which stalls ~8s behind Docker DNS
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+  OTEL_EXPORTER_OTLP_INSECURE: "true"
+  CHAOS_DUPLICATE_PUBLISH: ${CHAOS_DUPLICATE_PUBLISH:-false}   # chaos scenario: publish every Kafka message twice
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -13,7 +20,7 @@ services:
       POSTGRES_PASSWORD: tickless
       POSTGRES_DB: postgres
     command: ["postgres", "-c", "max_connections=300", "-c", "wal_level=logical"]
-    ports: ["5432:5432"]
+    ports: ["${TICKLESS_PG_PORT:-5433}:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
@@ -199,7 +206,103 @@ services:
       timeout: 3s
       retries: 30
 
+  # ---------------------------------------------------------------- Tickless services
+  # Dev-only settings are flagged in comments. Database access goes through pgbouncer
+  # (DATABASE_URL); migrations use a direct connection (MIGRATE_DATABASE_URL).
+
+  ledger:
+    build: {context: ../.., dockerfile: deploy/docker/Dockerfile, args: {SERVICE: ledger}}
+    image: tickless/ledger:dev
+    <<: *restart
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgres://tickless:tickless@pgbouncer:5432/ledger?sslmode=disable
+      MIGRATE_DATABASE_URL: postgres://tickless:tickless@postgres:5432/ledger?sslmode=disable
+      GRPC_ADDR: ":9101"
+      ADMIN_ADDR: ":9201"
+      ORDERS_ADDR: orders:9102
+      LEDGER_ALLOW_SEED: "true"   # DEV ONLY: lets the e2e test / demo seed balances (AdminCredit RPC)
+    ports: ["9101:9101"]
+    depends_on: &infra-deps
+      pgbouncer: {condition: service_healthy}
+      postgres: {condition: service_healthy}
+      kafka-init: {condition: service_completed_successfully}
+      otel-collector: {condition: service_started}
+    healthcheck: &app-health
+      test: ["CMD", "/app", "healthcheck"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+      start_period: 5s
+
+  identity:
+    build: {context: ../.., dockerfile: deploy/docker/Dockerfile, args: {SERVICE: identity}}
+    image: tickless/identity:dev
+    <<: *restart
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgres://tickless:tickless@pgbouncer:5432/identity?sslmode=disable
+      MIGRATE_DATABASE_URL: postgres://tickless:tickless@postgres:5432/identity?sslmode=disable
+      GRPC_ADDR: ":9103"
+      ADMIN_ADDR: ":9203"
+      IDENTITY_DEV_EPHEMERAL_ENC_KEY: "true"   # DEV ONLY: random key per start (k8s uses a Secret)
+      IDENTITY_AUTO_VERIFY: "true"             # DEV ONLY until the notifier delivers mail (phase 6)
+      IDENTITY_BOOTSTRAP_ADMIN_EMAIL: admin@tickless.local
+      IDENTITY_BOOTSTRAP_ADMIN_PASSWORD: ${TICKLESS_ADMIN_PASSWORD:-dev-admin-password}   # DEV placeholder
+    ports: ["9103:9103"]
+    depends_on: *infra-deps
+    healthcheck: *app-health
+
+  orders:
+    build: {context: ../.., dockerfile: deploy/docker/Dockerfile, args: {SERVICE: orders}}
+    image: tickless/orders:dev
+    <<: *restart
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgres://tickless:tickless@pgbouncer:5432/orders?sslmode=disable
+      MIGRATE_DATABASE_URL: postgres://tickless:tickless@postgres:5432/orders?sslmode=disable
+      GRPC_ADDR: ":9102"
+      ADMIN_ADDR: ":9202"
+      LEDGER_ADDR: ledger:9101
+    ports: ["9102:9102"]
+    depends_on: *infra-deps
+    healthcheck: *app-health
+
+  matching:
+    build: {context: ../.., dockerfile: deploy/docker/Dockerfile, args: {SERVICE: matching}}
+    image: tickless/matching:dev
+    <<: *restart
+    environment:
+      <<: *app-env
+      ADMIN_ADDR: ":9204"
+      SNAPSHOT_DIR: /data/snapshots
+      SNAPSHOT_EVERY: "1000"
+    volumes: ["matchingdata:/data"]
+    depends_on: *infra-deps
+    healthcheck: *app-health
+
+  gateway:
+    build: {context: ../.., dockerfile: deploy/docker/Dockerfile, args: {SERVICE: gateway}}
+    image: tickless/gateway:dev
+    <<: *restart
+    environment:
+      <<: *app-env
+      HTTP_ADDR: ":8080"
+      ADMIN_ADDR: ":9205"
+      IDENTITY_ADDR: identity:9103
+      LEDGER_ADDR: ledger:9101
+      ORDERS_ADDR: orders:9102
+      REDIS_ADDR: redis:6379
+      CORS_ALLOWED_ORIGINS: http://localhost:5173
+      RATE_AUTH_BURST: "100"   # e2e/load tests sign up many users from one IP
+    ports: ["8080:8080"]
+    depends_on:
+      <<: *infra-deps
+      redis: {condition: service_healthy}
+    healthcheck: *app-health
+
 volumes:
+  matchingdata:
   pgdata:
   kafkadata:
   rabbitdata:

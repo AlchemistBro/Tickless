@@ -3,18 +3,28 @@ on:
   push: {branches: [main]}
   pull_request:
 
+env:
+  GO_VERSION_FILE: pkg/go.mod
+
 jobs:
   lint:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [pkg, services/matching, services/ledger, services/identity, services/orders, services/gateway, e2e]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: {go-version-file: "${{ env.GO_VERSION_FILE }}"}
+      - uses: golangci/golangci-lint-action@v8
+        with: {version: v2.14.0, working-directory: "${{ matrix.module }}"}
+
+  proto:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
-      - uses: actions/setup-go@v5
-        with: {go-version-file: pkg/go.mod}
-      - uses: golangci/golangci-lint-action@v8
-        with: {version: v2.14.0, working-directory: pkg}
-      - uses: golangci/golangci-lint-action@v8
-        with: {version: v2.14.0, working-directory: services/matching}
       - uses: bufbuild/buf-action@v1
         with:
           lint: true
@@ -22,25 +32,39 @@ jobs:
           breaking_against: https://github.com/${{ github.repository }}.git#branch=main
           format: false
 
-  test:
+  unit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-        with: {go-version-file: pkg/go.mod}
-      - name: Unit tests (race) with coverage
+        with: {go-version-file: "${{ env.GO_VERSION_FILE }}"}
+      - name: Unit tests (race) with coverage; includes the OpenAPI contract tests
         run: make test
       - name: Short fuzz run
         run: make fuzz
       - name: Engine targets (SPEC §5)
         run: make bench
 
-  compose-smoke:
+  integration:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: {go-version-file: "${{ env.GO_VERSION_FILE }}"}
+      - name: Integration tests (testcontainers: PostgreSQL, Kafka) with coverage
+        run: make test-integration
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: {go-version-file: "${{ env.GO_VERSION_FILE }}"}
       - run: make up
+      - run: make e2e
       - if: failure()
-        run: make ps && docker compose -f deploy/compose/docker-compose.yml logs --tail=50
+        run: make ps && docker compose -f deploy/compose/docker-compose.yml logs --tail=80
+      - name: Chaos - duplicate every Kafka message
+        run: make chaos-dup
       - if: always()
         run: make down

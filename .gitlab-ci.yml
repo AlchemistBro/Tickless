@@ -1,21 +1,23 @@
 # Equivalent of .github/workflows/ci.yml
-stages: [lint, test, smoke]
+stages: [lint, test, e2e]
 
 lint:
   stage: lint
   image: golangci/golangci-lint:v2.14.0
+  parallel:
+    matrix:
+      - MODULE: [pkg, services/matching, services/ledger, services/identity, services/orders, services/gateway, e2e]
   script:
-    - cd pkg && golangci-lint run ./...
-    - cd services/matching && golangci-lint run ./...
+    - cd $MODULE && golangci-lint run ./...
 
-buf:
+proto:
   stage: lint
   image: bufbuild/buf:latest
   script:
     - buf lint
     - 'if [ -n "$CI_MERGE_REQUEST_ID" ]; then buf breaking --against "$CI_REPOSITORY_URL#branch=main"; fi'
 
-test:
+unit:
   stage: test
   image: golang:1.27
   script:
@@ -24,13 +26,26 @@ test:
     - make fuzz
     - make bench
 
-compose-smoke:
-  stage: smoke
-  image: docker:27
+integration:
+  stage: test
+  image: golang:1.27
+  services: [docker:27-dind]
+  variables: {DOCKER_HOST: tcp://docker:2375, DOCKER_TLS_CERTDIR: "", TESTCONTAINERS_HOST_OVERRIDE: docker}
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq make docker.io
+  script:
+    - make test-integration
+
+e2e:
+  stage: e2e
+  image: golang:1.27
   services: [docker:27-dind]
   variables: {DOCKER_HOST: tcp://docker:2375, DOCKER_TLS_CERTDIR: ""}
-  before_script: [apk add --no-cache make bash curl]
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq make docker.io docker-compose-v2 curl
   script:
     - make up
+    - make e2e
+    - make chaos-dup
   after_script:
     - make down

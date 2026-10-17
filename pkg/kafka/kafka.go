@@ -171,11 +171,17 @@ func Consume(ctx context.Context, cfg ConsumerConfig, h Handler) error {
 		kgo.ConsumeResetOffset(kgo.NewOffset().AtStart()),
 		kgo.DisableAutoCommit(),
 		kgo.BlockRebalanceOnPoll(),
+		// A crashed member is evicted after 10 s (default 45 s) so failover is quick.
+		kgo.SessionTimeout(10*time.Second),
+		kgo.HeartbeatInterval(3*time.Second),
 	)
 	if err != nil {
 		return err
 	}
 	defer cl.Close()
+	// With BlockRebalanceOnPoll, Close (which leaves the group) blocks until
+	// rebalances are allowed again; always allow on the way out.
+	defer cl.AllowRebalance()
 	lag := newLagTracker(cfg.Group)
 
 	backoff := 100 * time.Millisecond

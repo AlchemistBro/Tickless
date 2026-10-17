@@ -74,7 +74,7 @@ func Run(ctx context.Context, cfg Config) error {
 	if err != nil {
 		return err
 	}
-	defer ordersConn.Close()
+	defer func() { _ = ordersConn.Close() }()
 	markets := market.NewCache(market.FetchFromOrders(ordersv1.NewOrdersServiceClient(ordersConn)))
 
 	brokers := kafka.Brokers(cfg.KafkaBrokers)

@@ -141,7 +141,8 @@ func (s *Service) Signup(ctx context.Context, email, pw string) (int64, error) {
 			hashToken(token), id, s.o.Now().Add(s.o.VerifyTTL)); err != nil {
 			return err
 		}
-		msg, err := proto.Marshal(&usersv1.UserSignedUp{Meta: eventMeta(ctx), UserId: id, Email: email, VerificationToken: token})
+		msg, err := proto.Marshal(&usersv1.UserEvent{Meta: eventMeta(ctx), UserId: id,
+			Event: &usersv1.UserEvent_SignedUp{SignedUp: &usersv1.UserSignedUp{Email: email, VerificationToken: token}}})
 		if err != nil {
 			return err
 		}
@@ -414,7 +415,8 @@ func (s *Service) SetFrozen(ctx context.Context, userID int64, frozen bool) erro
 				return err
 			}
 		}
-		msg, err := proto.Marshal(&usersv1.UserFrozen{Meta: eventMeta(ctx), UserId: userID, Frozen: frozen})
+		msg, err := proto.Marshal(&usersv1.UserEvent{Meta: eventMeta(ctx), UserId: userID,
+			Event: &usersv1.UserEvent_Frozen{Frozen: &usersv1.UserFrozen{Frozen: frozen}}})
 		if err != nil {
 			return err
 		}

@@ -14,6 +14,7 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -131,7 +132,7 @@ func ServeAdmin(ctx context.Context, addr string, ready func(context.Context) er
 	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	go func() {
 		<-ctx.Done()
-		sctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		sctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
 		defer cancel()
 		_ = srv.Shutdown(sctx)
 	}()
@@ -141,3 +142,49 @@ func ServeAdmin(ctx context.Context, addr string, ready func(context.Context) er
 		}
 	}()
 }
+
+// HealthcheckMain implements `<binary> healthcheck` for container healthchecks
+// (distroless images have no shell or curl). Call it first in main(): when the
+// first argument is "healthcheck" it probes /readyz on the admin port and
+// exits 0 (ready) or 1.
+func HealthcheckMain(defaultAdminAddr string) {
+	if len(os.Args) < 2 || os.Args[1] != "healthcheck" {
+		return
+	}
+	addr := Env("ADMIN_ADDR", defaultAdminAddr)
+	if strings.HasPrefix(addr, ":") {
+		addr = "127.0.0.1" + addr
+	}
+	c := http.Client{Timeout: 3 * time.Second}
+	resp, err := c.Get("http://" + addr + "/readyz")
+	if err != nil {
+		os.Exit(1)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		os.Exit(1)
+	}
+	os.Exit(0)
+}
+
+// Main is the shared process entrypoint of every service: it handles the
+// `healthcheck` sub-command, cancels the context on SIGINT/SIGTERM, runs the
+// service and enforces a hard deadline on shutdown so that a stuck goroutine
+// can never make the container hang until the orchestrator SIGKILLs it.
+func Main(name, defaultAdminAddr string, run func(context.Context) error) {
+	HealthcheckMain(defaultAdminAddr)
+	ctx, stop := SignalContext()
+	defer stop()
+	go func() {
+		<-ctx.Done()
+		time.Sleep(shutdownGrace)
+		slog.Error("shutdown timed out, exiting", "service", name, "grace", shutdownGrace.String())
+		os.Exit(1)
+	}()
+	if err := run(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		slog.Error("service stopped", "service", name, "err", err)
+		os.Exit(1)
+	}
+}
+
+const shutdownGrace = 15 * time.Second

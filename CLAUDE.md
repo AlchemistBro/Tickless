@@ -28,9 +28,17 @@ Modules are tied together by `go.work`.
 |---|---|
 | `make test` | unit tests with race detector for all modules |
 | `make lint` | golangci-lint + buf lint |
-| `make bench` | engine benchmarks (phase 2+) |
+| `make bench` | engine benchmarks vs SPEC §5 (Linux container on Windows) |
+| `make test-integration` | testcontainers integration tests (needs Docker; run on the host) |
+| `make e2e` / `make chaos-dup` | black-box suite against `make up`; duplicate-every-message chaos |
 | `make proto` | buf generate |
 | `make up` / `make down` | compose stack (waits for healthy) |
 | `make fuzz` | short fuzz run over fuzz targets |
 
 Environment: Windows host with Git Bash/GNU make; Docker Desktop; Go toolchain in PATH.
+
+## Gotchas learned
+- Bash tool heredocs containing an apostrophe break: write such files with the Write tool.
+- Host port 5432 may belong to a local Postgres: compose publishes Postgres on 5433.
+- Service modules use `replace github.com/tickless/pkg => ../../pkg`; new modules need `go work use`.
+- Run `gofmt -w` after scripted edits; `make lint` runs every module.

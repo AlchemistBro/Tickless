@@ -13,8 +13,9 @@ import (
 
 func decodeToken(t *testing.T, payload []byte) string {
 	t.Helper()
-	var ev usersv1.UserSignedUp
+	var ev usersv1.UserEvent
 	require.NoError(t, proto.Unmarshal(payload, &ev))
-	require.NotEmpty(t, ev.VerificationToken)
-	return ev.VerificationToken
+	require.NotNil(t, ev.GetSignedUp())
+	require.NotEmpty(t, ev.GetSignedUp().VerificationToken)
+	return ev.GetSignedUp().VerificationToken
 }

@@ -45,7 +45,7 @@ func Migrate(ctx context.Context, dsn string, fsys fs.FS, dir string) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	provider, err := goose.NewProvider(goose.DialectPostgres, db, mustSub(fsys, dir))
 	if err != nil {
 		return err
