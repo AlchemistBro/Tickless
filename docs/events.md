@@ -5,12 +5,12 @@ All messages are Protobuf (`api/proto`, generated into `pkg/gen`). Every record 
 | Topic | Key (= partition by) | Producer | Value | Consumers |
 |---|---|---|---|---|
 | `matching.commands` | market | orders (outbox) | `matching.v1.Command` | matching |
-| `matching.events` | market | matching | `matching.v1.Event` | ledger, orders, marketdata (P4), candles (P4) |
-| `ledger.events` | user id | ledger (outbox) | `ledger.v1.BalanceChanged` | gateway private WS (P4) |
+| `matching.events` | market | matching | `matching.v1.Event` | ledger, orders, candles (consumer groups); marketdata and the gateway private feed (own offsets / live) |
+| `ledger.events` | user id | ledger (outbox) | `ledger.v1.BalanceChanged` | gateway private WS |
 | `users.events` | user id | identity (outbox) | `users.v1.UserEvent` (oneof `signed_up`, `frozen`) | gateway (frozen set), notifier (P6) |
 | `deposits.events` | user id | chainwatcher (P5) | planned | ledger, notifier |
 | `withdrawals.events` | user id | withdrawals (P6) | planned | ledger, notifier |
-| `candles.live` | market | candles (P4) | planned | gateway WS |
+| `candles.live` | market | candles | `candles.v1.CandleUpdate` | marketdata (public WS `candles.*`) |
 
 Topics are created by the `kafka-init` job in `deploy/compose` (6 partitions, replication 1 locally).
 
@@ -39,3 +39,6 @@ Event order for a command: `ACCEPTED`, then per level swept `TRADE`* + one `BOOK
 
 ## Common
 `common.v1.EventMeta{event_id (UUIDv7), traceparent, produced_at}`; `common.v1.Amount{units}` = integer count of the smallest unit as a base-10 string (ADR 0001).
+
+## candles.v1.CandleUpdate
+`meta`, `market`, `interval` (`1m 5m 15m 1h 4h 1d`), `candle` {`open_time_unix`, `open/high/low/close` (ticks), `volume_lots`, `turnover` (tick-lots, decimal string), `trades`}. Always the complete current state of that candle; published after each ClickHouse insert (best effort, see ADR 0008). The candles service dedupes trades by `(market, trade_id)` before inserting.

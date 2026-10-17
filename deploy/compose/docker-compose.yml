@@ -339,6 +339,20 @@ services:
       redis: {condition: service_healthy}
     healthcheck: *app-health
 
+  web:
+    # The trading terminal (static build behind nginx; /v1 and /ws are forwarded to the gateway).
+    build: {context: ../../web}
+    image: tickless/web:dev
+    <<: *restart
+    ports: ["8088:8080"]
+    depends_on:
+      gateway: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
 volumes:
   matchingdata:
   pgdata:

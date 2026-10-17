@@ -1,0 +1,56 @@
+:root {
+  --bg: #0b0e14; --panel: #121722; --panel2: #171d2b; --line: #232b3d; --text: #d6dbe7; --muted: #7f8aa3;
+  --buy: #26a69a; --sell: #ef5350; --accent: #4c8dff;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.brand { letter-spacing: .5px; color: var(--accent); }
+.spacer { flex: 1; }
+.muted { color: var(--muted); }
+.bad { color: var(--sell); }
+.good { color: var(--buy); }
+button, select, input { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; font: inherit; }
+button { cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.buy { background: var(--buy); border-color: var(--buy); color: #04201d; font-weight: 600; }
+button.sell { background: var(--sell); border-color: var(--sell); color: #2b0807; font-weight: 600; }
+button:disabled { opacity: .5; cursor: default; }
+input[type=checkbox] { padding: 0; }
+.dashboard { padding: 8px; }
+.toolbar { position: relative; display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.menu { position: absolute; top: 30px; left: 0; z-index: 20; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px; display: grid; gap: 4px; min-width: 200px; }
+.menu label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+.widget { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; }
+.widget-head { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: var(--panel2); border-bottom: 1px solid var(--line); cursor: grab; user-select: none; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
+.widget-head button { border: none; background: none; color: var(--muted); padding: 0 4px; font-size: 16px; }
+.widget-body { flex: 1; min-height: 0; overflow: auto; padding: 6px 8px; }
+.widget-error { padding: 8px; color: var(--sell); }
+.widget-error pre { white-space: pre-wrap; }
+.react-grid-item.react-grid-placeholder { background: var(--accent); opacity: .15; border-radius: 6px; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th { text-align: right; color: var(--muted); font-weight: 500; padding: 2px 4px; }
+td { text-align: right; padding: 1px 4px; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+.row-bar { position: relative; }
+.row-bar > td { position: relative; z-index: 1; }
+.row-bar .bar { position: absolute; top: 0; bottom: 0; right: 0; opacity: .18; z-index: 0; }
+.clickable { cursor: pointer; }
+.clickable:hover td { background: var(--panel2); }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: grid; place-items: center; z-index: 50; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: grid; gap: 10px; width: 320px; }
+.card h2 { margin: 0 0 4px; }
+.card a { color: var(--accent); font-size: 12px; }
+.form { display: grid; gap: 8px; }
+.form .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.form .tabs button { border-radius: 0; }
+.form .tabs button.on.buy { background: var(--buy); color: #04201d; }
+.form .tabs button.on.sell { background: var(--sell); color: #2b0807; }
+.form label { display: grid; gap: 2px; color: var(--muted); font-size: 12px; }
+.inline { display: flex; gap: 8px; align-items: center; }
+.big { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px 14px; }
+.kv div span { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; }
+.empty { color: var(--muted); padding: 8px; }

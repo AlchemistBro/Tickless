@@ -23,3 +23,7 @@
 | Matching log truncated / checkpoints lost / partition count changed | `TestRefusesToStart*` (the service refuses to start) |
 | Ledger history edited | `TestLedgerTablesAreAppendOnly` (UPDATE/DELETE/TRUNCATE on postings and journal entries fail) |
 | Replay of a signed API request | `TestSignedOrderReplayCreatesOneOrder` (client_order_id required, one order) |
+| Market-data book equals the engine book | `TestBookEqualsEngineStateAfterEveryCommand`, `TestWSClientRebuildsExactBookFromSnapshotAndDeltas` |
+| A lost WebSocket delta is detected and repaired | `TestClientDetectsMissedDeltaAndResyncsByResubscribing`, `web/src/core/book.test.ts` |
+| Candles never double count | `TestInsertIsIdempotentPerMarketAndSurvivesRestart`, `make chaos-dup` (market-data scenario) |
+| Private events reach only their owner | `TestPrivateWSRequiresAuthAndIsolatesUsers`, `TestPrivateWebSocketDeliversOnlyOwnEvents` |

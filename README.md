@@ -2,7 +2,7 @@
 
 A self-hostable spot crypto exchange in Go (regtest / local devnets only). Spec: [SPEC.md](SPEC.md). Status: [PROGRESS.md](PROGRESS.md).
 
-**Current state: Phase 3** — two users can sign up, trade over REST against seeded balances, and every fill is settled in a double-entry ledger. Services: `gateway`, `identity`, `orders`, `matching`, `ledger`, on PostgreSQL + Kafka + Redis, traced end to end.
+**Current state: Phase 4** — users can sign up, trade over REST or in the **web terminal** against seeded balances; every fill is settled in a double-entry ledger; market data (order book, trades, ticker, candles) is served over REST and WebSocket. Services: `gateway`, `identity`, `orders`, `matching`, `ledger`, `marketdata`, `candles` on PostgreSQL + Kafka + Redis + ClickHouse, traced end to end.
 
 ```
  client --REST/HMAC--> gateway --gRPC--> identity   (users, JWT, API keys)
@@ -28,9 +28,13 @@ make test-integration  # testcontainers: PostgreSQL + Kafka per service
 make e2e     # black-box suite against the running stack
 make chaos-dup         # every Kafka message published twice; scenarios must still end identical
 make down
+make seed EMAIL=me@example.com ASSET=USDT AMOUNT=100000   # dev only: give a registered user funds
+make web-dev   # hot-reloading terminal on :5173 (proxies to the gateway)
+make web-test  # typecheck + unit tests of the terminal
 ```
 | UI | URL |
 |---|---|
+| **Web terminal** | http://localhost:8088 |
 | Grafana | http://localhost:3000 (admin/admin) |
 | Jaeger | http://localhost:16686 |
 | Prometheus / Alertmanager | :9090 / :9093 |
@@ -51,6 +55,9 @@ Balances can be seeded in development through the ledger AdminCredit RPC (`LEDGE
 
 The public API is specified in [api/openapi/openapi.yaml](api/openapi/openapi.yaml); a unit test keeps it in lockstep with the router and validates real responses against it. Kafka topics and schemas: [docs/events.md](docs/events.md). Invariants and the tests that prove them: [docs/invariants.md](docs/invariants.md).
 
+## The terminal is made of widgets
+The UI in [web/](web/) is a grid of **widgets**; each panel (chart, order book, trades, order entry, balances, ...) is one small file in `web/src/widgets/` and is discovered automatically. To add a panel, describe it to an AI assistant (or write it yourself) following [web/WIDGETS.md](web/WIDGETS.md); it appears in the **Widgets** menu, can be dragged and resized, and a malformed widget is rejected without breaking the others. The WebSocket protocol it uses is specified in [docs/websocket.md](docs/websocket.md).
+
 ## Architecture decisions
 - [0001 Money representation](docs/adr/0001-money-representation.md)
 - [0002 Matching engine concurrency model and book structure](docs/adr/0002-matching-engine-concurrency-model.md)
@@ -59,6 +66,7 @@ The public API is specified in [api/openapi/openapi.yaml](api/openapi/openapi.ya
 - [0005 Transactional outbox and idempotent consumers](docs/adr/0005-transactional-outbox.md)
 - [0006 Order placement saga, holds and rounding](docs/adr/0006-order-placement-saga-holds-and-rounding.md)
 - [0007 Kafka vs RabbitMQ](docs/adr/0007-kafka-vs-rabbitmq.md)
+- [0008 Why ClickHouse](docs/adr/0008-why-clickhouse.md)
 
 ## Matching engine results (`make bench`, Linux, Core Ultra 7 155H)
 | Target (SPEC §5) | Result |
@@ -69,13 +77,23 @@ The public API is specified in [api/openapi/openapi.yaml](api/openapi/openapi.ya
 
 Details, profiles and the known worst case (100k levels, ~30 µs): [docs/perf/engine](docs/perf/engine/README.md).
 
+## Market data results (local stack)
+| Target (SPEC §5 / phase 4) | Result |
+|---|---|
+| WS client rebuilds the exact book from snapshot + deltas | proven against the engine after every command and over a real socket |
+| Candles for all intervals equal the trades | proven against an independent aggregation, also under duplicate Kafka delivery |
+| Book delta visible on WS < 100 ms (p99) | **9.3 ms** (Kafka timestamp -> socket write, Prometheus histogram) |
+
 ## Known limitations (so far)
+- Candles are published live best-effort over `candles.live`; the REST history from ClickHouse is the exact source.
+- Public market data is served from memory by `marketdata`; an instance needs the Redis snapshot (or a full replay of `matching.events`) to start.
+- The private WebSocket authenticates with an access token (no API-key signing) and carries live events only.
 - A poison event stalls ONE partition of its consumer group (alert `ConsumerPartitionStalled`, runbook in `docs/runbooks/`); the ledger records it in `settlement_failures` and never skips it. Operators resolve it explicitly.
 - Matching refuses to start (instead of guessing) if its command log was truncated, its checkpoints cannot be restored or the partition count changed. In local development after such a change, reset the stack with `make down` (removes volumes).
 - A transient handler error (e.g. database down) retries with backoff and blocks the other partitions of that consumer while it lasts.
 - A duplicate `PlaceOrder` delayed by more than 262,144 commands is not detected by the engine; it cannot double-settle but stalls the ledger partition (ADR 0004).
 - The frozen-user set and API-key lookups are cached (Redis / 30 s in the gateway): revoking an API key can take up to 30 s on other gateway instances.
-- Market data (order book / candles / WebSocket), deposits, withdrawals, notifications, reconciliation, Kubernetes and the web UI are later phases (see [PROGRESS.md](PROGRESS.md)).
+- Deposits, withdrawals, notifications, reconciliation, Kubernetes and the web UI are later phases (see [PROGRESS.md](PROGRESS.md)).
 - Email verification is bypassed in the local stack (`IDENTITY_AUTO_VERIFY=true`) until the notifier exists; the verification token is already published on `users.events`.
 - Postings/orders are not yet partitioned by month (Phase 9, with EXPLAIN evidence).
 - Single-node Kafka/PostgreSQL locally; no replication.

@@ -6,7 +6,7 @@ lint:
   image: golangci/golangci-lint:v2.14.0
   parallel:
     matrix:
-      - MODULE: [pkg, services/matching, services/ledger, services/identity, services/orders, services/gateway, e2e]
+      - MODULE: [pkg, services/matching, services/ledger, services/identity, services/orders, services/gateway, services/marketdata, services/candles, e2e]
   script:
     - cd $MODULE && golangci-lint run ./...
 
@@ -36,6 +36,12 @@ integration:
   script:
     - make test-integration
 
+web:
+  stage: test
+  image: node:22
+  script:
+    - cd web && npm ci --no-audit --no-fund && npm run typecheck && npm test && npm run build
+
 e2e:
   stage: e2e
   image: golang:1.27
@@ -46,6 +52,8 @@ e2e:
   script:
     - make up
     - make e2e
+    - apt-get install -y -qq nodejs npm
+    - cd web && npm ci --no-audit --no-fund && npx playwright install --with-deps chromium && npm run test:ui && cd ..
     - make chaos-dup
   after_script:
     - make down
