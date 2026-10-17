@@ -371,6 +371,99 @@ paths:
         '401': {$ref: '#/components/responses/Error'}
         '403': {$ref: '#/components/responses/Error'}
         '404': {$ref: '#/components/responses/Error'}
+  /v1/market/tickers:
+    get:
+      operationId: marketTickers
+      security: []
+      tags: [market-data]
+      summary: Rolling 24 h ticker of every market
+      responses:
+        '200':
+          description: Tickers
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tickers]
+                properties: {tickers: {type: array, items: {$ref: '#/components/schemas/Ticker'}}}
+        '502': {$ref: '#/components/responses/Error'}
+  /v1/market/{market}/book:
+    get:
+      operationId: marketBook
+      security: []
+      tags: [market-data]
+      summary: Aggregated order book (best levels first)
+      description: |
+        `seq` is the sequence number of the last book change; the WebSocket channel
+        `book.{market}` continues from it (see docs/websocket.md).
+      parameters:
+        - {name: market, in: path, required: true, schema: {type: string}}
+        - {name: depth, in: query, schema: {type: integer, minimum: 1, maximum: 500, default: 50}}
+      responses:
+        '200': {description: Book, content: {application/json: {schema: {$ref: '#/components/schemas/Book'}}}}
+        '404': {$ref: '#/components/responses/Error'}
+        '502': {$ref: '#/components/responses/Error'}
+  /v1/market/{market}/trades:
+    get:
+      operationId: marketTrades
+      security: []
+      tags: [market-data]
+      summary: Recent public trades, newest first
+      parameters:
+        - {name: market, in: path, required: true, schema: {type: string}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 500, default: 50}}
+      responses:
+        '200':
+          description: Trades
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [market, trades]
+                properties:
+                  market: {type: string}
+                  trades: {type: array, items: {$ref: '#/components/schemas/PublicTrade'}}
+        '404': {$ref: '#/components/responses/Error'}
+        '502': {$ref: '#/components/responses/Error'}
+  /v1/market/{market}/ticker:
+    get:
+      operationId: marketTicker
+      security: []
+      tags: [market-data]
+      summary: Rolling 24 h ticker
+      parameters:
+        - {name: market, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Ticker, content: {application/json: {schema: {$ref: '#/components/schemas/Ticker'}}}}
+        '404': {$ref: '#/components/responses/Error'}
+        '502': {$ref: '#/components/responses/Error'}
+  /v1/market/{market}/candles:
+    get:
+      operationId: marketCandles
+      security: []
+      tags: [market-data]
+      summary: OHLCV candles, oldest first
+      parameters:
+        - {name: market, in: path, required: true, schema: {type: string}}
+        - {name: interval, in: query, schema: {type: string, enum: [1m, 5m, 15m, 1h, 4h, 1d], default: 1m}}
+        - {name: from, in: query, description: "Unix seconds, inclusive", schema: {type: integer}}
+        - {name: to, in: query, description: "Unix seconds, exclusive", schema: {type: integer}}
+        - {name: limit, in: query, description: "Newest N candles in range", schema: {type: integer, minimum: 1, maximum: 2000, default: 500}}
+      responses:
+        '200':
+          description: Candles
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [market, interval, candles]
+                properties:
+                  market: {type: string}
+                  interval: {type: string}
+                  candles: {type: array, items: {$ref: '#/components/schemas/Candle'}}
+        '400': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '503': {$ref: '#/components/responses/Error'}
 components:
   securitySchemes:
     bearer: {type: http, scheme: bearer, bearerFormat: JWT}
@@ -514,6 +607,54 @@ components:
         created_at: {type: string, format: date-time}
         revoked: {type: boolean}
         secret: {type: string, description: Only present in the creation response}
+    Book:
+      type: object
+      required: [market, seq, bids, asks]
+      properties:
+        market: {type: string}
+        seq: {type: integer, minimum: 0, description: Sequence number of the last book change}
+        bids: {type: array, items: {$ref: '#/components/schemas/BookLevel'}, description: Best (highest) first}
+        asks: {type: array, items: {$ref: '#/components/schemas/BookLevel'}, description: Best (lowest) first}
+    BookLevel:
+      type: array
+      minItems: 2
+      maxItems: 2
+      items: {type: string}
+      description: "[price, quantity] as decimal strings"
+    PublicTrade:
+      type: object
+      required: [id, price, qty, side, time]
+      properties:
+        id: {type: string}
+        price: {type: string}
+        qty: {type: string}
+        side: {type: string, enum: [buy, sell], description: Side of the taker}
+        time: {type: string, format: date-time}
+    Ticker:
+      type: object
+      required: [market, last, open, high, low, volume, quote_volume, trades, change_pct]
+      properties:
+        market: {type: string}
+        last: {type: string}
+        open: {type: string}
+        high: {type: string}
+        low: {type: string}
+        volume: {type: string, description: Base asset traded in 24 h}
+        quote_volume: {type: string, description: Quote asset traded in 24 h}
+        trades: {type: integer}
+        change_pct: {type: string}
+    Candle:
+      type: object
+      required: [t, o, h, l, c, v, quote_volume, n]
+      properties:
+        t: {type: integer, description: "Bucket start, unix seconds UTC"}
+        o: {type: string}
+        h: {type: string}
+        l: {type: string}
+        c: {type: string}
+        v: {type: string, description: Base volume}
+        quote_volume: {type: string}
+        n: {type: integer, description: Number of trades}
     User:
       type: object
       required: [id, email, role, email_verified, frozen, created_at]

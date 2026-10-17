@@ -21,9 +21,11 @@ import (
 	"github.com/tickless/gateway/internal/httpapi"
 	identityv1 "github.com/tickless/pkg/gen/tickless/identity/v1"
 	ledgerv1 "github.com/tickless/pkg/gen/tickless/ledger/v1"
+	matchingv1 "github.com/tickless/pkg/gen/tickless/matching/v1"
 	ordersv1 "github.com/tickless/pkg/gen/tickless/orders/v1"
 	usersv1 "github.com/tickless/pkg/gen/tickless/users/v1"
 	"github.com/tickless/pkg/kafka"
+	"github.com/tickless/pkg/market"
 	"github.com/tickless/pkg/otelx"
 	"github.com/tickless/pkg/svc"
 )
@@ -34,6 +36,8 @@ type Config struct {
 	IdentityAddr, LedgerAddr, OrdersAddr string
 	RedisAddr                            string
 	KafkaBrokers                         string
+	MarketDataURL                        string
+	WSOrigins                            []string
 	AllowedOrigins                       []string
 	TrustProxy                           bool
 	Limits                               httpapi.Limits
@@ -55,7 +59,12 @@ func ConfigFromEnv() Config {
 			origins = append(origins, o)
 		}
 	}
+	var wsOrigins []string
+	for _, o := range origins {
+		wsOrigins = append(wsOrigins, strings.TrimPrefix(strings.TrimPrefix(o, "http://"), "https://"))
+	}
 	return Config{
+		MarketDataURL: svc.Env("MARKETDATA_URL", "http://localhost:8081"), WSOrigins: wsOrigins,
 		HTTPAddr: svc.Env("HTTP_ADDR", ":8080"), AdminAddr: svc.Env("ADMIN_ADDR", ":9205"),
 		IdentityAddr: svc.Env("IDENTITY_ADDR", "localhost:9103"), LedgerAddr: svc.Env("LEDGER_ADDR", "localhost:9101"),
 		OrdersAddr: svc.Env("ORDERS_ADDR", "localhost:9102"), RedisAddr: svc.Env("REDIS_ADDR", "localhost:6379"),
@@ -91,10 +100,11 @@ func Run(ctx context.Context, cfg Config) error {
 	}
 	defer func() { _ = ordersConn.Close() }()
 	identity := identityv1.NewIdentityServiceClient(idConn)
+	markets := market.NewCache(market.FetchFromOrders(ordersv1.NewOrdersServiceClient(ordersConn)))
 
 	api := httpapi.New(httpapi.Deps{
 		Identity: identity, Ledger: ledgerv1.NewLedgerServiceClient(ledgerConn), Orders: ordersv1.NewOrdersServiceClient(ordersConn),
-		Redis: rdb, Limits: cfg.Limits, AllowedOrigins: cfg.AllowedOrigins, TrustProxy: cfg.TrustProxy, RequireFrozenSync: true,
+		Redis: rdb, Limits: cfg.Limits, AllowedOrigins: cfg.AllowedOrigins, TrustProxy: cfg.TrustProxy, RequireFrozenSync: true, MarketData: cfg.MarketDataURL, WSOrigins: cfg.WSOrigins, Markets: markets,
 		PublicKey: func(ctx context.Context) (ed25519.PublicKey, error) {
 			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 			defer cancel()
@@ -132,6 +142,8 @@ func Run(ctx context.Context, cfg Config) error {
 		defer cancel()
 		return srv.Shutdown(sctx)
 	})
+	g.Go(func() error { markets.Run(gctx, 30*time.Second); return nil })
+	g.Go(func() error { return privateFeed(gctx, kafka.Brokers(cfg.KafkaBrokers), api) })
 	g.Go(func() error {
 		// Rebuild the frozen-user set from identity (retry until identity is reachable).
 		for gctx.Err() == nil {
@@ -183,4 +195,38 @@ func applyFrozen(ctx context.Context, rdb redis.Cmdable, userID int64, frozen bo
 		return rdb.SAdd(ctx, httpapi.FrozenSet, id).Err()
 	}
 	return rdb.SRem(ctx, httpapi.FrozenSet, id).Err()
+}
+
+// privateFeed fans matching and ledger events out to the private WebSocket
+// connections of the users they belong to. Only live events matter (a client
+// loads history over REST), so it starts at the end of the topics, without a
+// consumer group.
+func privateFeed(ctx context.Context, brokers []string, api *httpapi.Server) error {
+	cl, err := kgo.NewClient(kgo.SeedBrokers(brokers...), kgo.ConsumeTopics("matching.events", "ledger.events"),
+		kgo.ConsumeResetOffset(kgo.NewOffset().AtEnd()), kgo.FetchMaxWait(20*time.Millisecond))
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+	for ctx.Err() == nil {
+		fetches := cl.PollFetches(ctx)
+		if ctx.Err() != nil {
+			return nil
+		}
+		fetches.EachRecord(func(r *kgo.Record) {
+			switch r.Topic {
+			case "matching.events":
+				var ev matchingv1.Event
+				if proto.Unmarshal(r.Value, &ev) == nil {
+					api.PublishMatching(&ev, r.Timestamp)
+				}
+			case "ledger.events":
+				var ev ledgerv1.BalanceChanged
+				if proto.Unmarshal(r.Value, &ev) == nil {
+					api.PublishBalance(&ev, r.Timestamp)
+				}
+			}
+		})
+	}
+	return nil
 }

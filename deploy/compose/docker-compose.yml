@@ -281,6 +281,43 @@ services:
     depends_on: *infra-deps
     healthcheck: *app-health
 
+  candles:
+    build: {context: ../.., dockerfile: deploy/docker/Dockerfile, args: {SERVICE: candles}}
+    image: tickless/candles:dev
+    <<: *restart
+    environment:
+      <<: *app-env
+      GRPC_ADDR: ":9106"
+      ADMIN_ADDR: ":9206"
+      CLICKHOUSE_ADDR: clickhouse:9000
+      CLICKHOUSE_DB: tickless
+      CLICKHOUSE_USER: tickless
+      CLICKHOUSE_PASSWORD: tickless
+    depends_on:
+      kafka-init: {condition: service_completed_successfully}
+      clickhouse: {condition: service_healthy}
+      otel-collector: {condition: service_started}
+    healthcheck: *app-health
+
+  marketdata:
+    build: {context: ../.., dockerfile: deploy/docker/Dockerfile, args: {SERVICE: marketdata}}
+    image: tickless/marketdata:dev
+    <<: *restart
+    environment:
+      <<: *app-env
+      HTTP_ADDR: ":8081"
+      ADMIN_ADDR: ":9207"
+      REDIS_ADDR: redis:6379
+      ORDERS_ADDR: orders:9102
+      CANDLES_ADDR: candles:9106
+      CORS_ALLOWED_ORIGINS: http://localhost:5173
+    ports: ["8081:8081"]
+    depends_on:
+      kafka-init: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      otel-collector: {condition: service_started}
+    healthcheck: *app-health
+
   gateway:
     build: {context: ../.., dockerfile: deploy/docker/Dockerfile, args: {SERVICE: gateway}}
     image: tickless/gateway:dev
@@ -293,6 +330,7 @@ services:
       LEDGER_ADDR: ledger:9101
       ORDERS_ADDR: orders:9102
       REDIS_ADDR: redis:6379
+      MARKETDATA_URL: http://marketdata:8081
       CORS_ALLOWED_ORIGINS: http://localhost:5173
       RATE_AUTH_BURST: "100"   # e2e/load tests sign up many users from one IP
     ports: ["8080:8080"]

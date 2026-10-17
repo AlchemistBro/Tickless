@@ -30,6 +30,8 @@ import (
 	identityv1 "github.com/tickless/pkg/gen/tickless/identity/v1"
 	ledgerv1 "github.com/tickless/pkg/gen/tickless/ledger/v1"
 	ordersv1 "github.com/tickless/pkg/gen/tickless/orders/v1"
+	"github.com/tickless/pkg/market"
+	"github.com/tickless/pkg/wshub"
 )
 
 // Limits are token-bucket parameters (tokens per second, burst).
@@ -61,7 +63,18 @@ type Deps struct {
 	// RequireFrozenSync makes authenticated requests fail with 503 until
 	// SyncFrozen has completed once (production wiring sets it).
 	RequireFrozenSync bool
-	Now               func() time.Time
+	// MarketData is the base URL of the marketdata service; public market data
+	// (REST and WebSocket) is proxied to it. Empty disables those routes.
+	MarketData string
+	// WSOrigins are Origin host patterns accepted for the private WebSocket.
+	WSOrigins []string
+	// WSAuthTimeout is how long a private WebSocket may stay unauthenticated (default 10 s).
+	WSAuthTimeout time.Duration
+	// Markets formats private WebSocket messages (price/quantity decimals).
+	Markets interface {
+		Spec(symbol string) (market.Spec, bool)
+	}
+	Now func() time.Time
 }
 
 // Server is the HTTP API.
@@ -71,6 +84,8 @@ type Server struct {
 	idem         *idem.Store
 	verif        atomic.Pointer[auth.Verifier]
 	frozenSynced atomic.Bool
+	priv         *wshub.Hub
+	mdProxy      http.Handler
 	keyMu        sync.Mutex
 	lastKey      time.Time
 	keyCache     sync.Map // key id -> cachedKey
@@ -94,7 +109,10 @@ func New(d Deps) *Server {
 	if d.Limits == (Limits{}) {
 		d.Limits = DefaultLimits
 	}
-	s := &Server{d: d, limiter: ratelimit.New(d.Redis), idem: idem.New(d.Redis)}
+	s := &Server{d: d, limiter: ratelimit.New(d.Redis), idem: idem.New(d.Redis), priv: wshub.New("private")}
+	if d.MarketData != "" {
+		s.mdProxy = newProxy(d.MarketData, d.TrustProxy)
+	}
 	m := otel.Meter("tickless/gateway")
 	s.reqs, _ = m.Int64Counter("http_server_requests_total", metric.WithDescription("HTTP requests by route and status"))
 	s.dur, _ = m.Float64Histogram("http_server_request_duration_seconds", metric.WithDescription("HTTP request latency"),
@@ -203,11 +221,27 @@ func (s *Server) Routes() http.Handler {
 		_, _ = w.Write([]byte("ok"))
 	})
 
+	// WebSockets. Public market data is proxied to marketdata; the private feed is served here.
+	r.Group(func(r chi.Router) {
+		r.Use(s.ipRateLimit)
+		if s.mdProxy != nil {
+			r.Get("/ws/public", s.mdProxy.ServeHTTP)
+		}
+		r.Get("/ws/private", s.privateWS)
+	})
+
 	r.Route("/v1", func(r chi.Router) {
 		r.Use(s.ipRateLimit)
 
 		// Public.
 		r.Get("/markets", s.listMarkets)
+		if s.mdProxy != nil {
+			r.Get("/market/tickers", s.mdProxy.ServeHTTP)
+			r.Get("/market/{market}/book", s.mdProxy.ServeHTTP)
+			r.Get("/market/{market}/trades", s.mdProxy.ServeHTTP)
+			r.Get("/market/{market}/ticker", s.mdProxy.ServeHTTP)
+			r.Get("/market/{market}/candles", s.mdProxy.ServeHTTP)
+		}
 		r.Group(func(r chi.Router) {
 			r.Use(s.authRateLimit)
 			r.Post("/auth/signup", s.signup)

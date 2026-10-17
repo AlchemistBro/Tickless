@@ -204,7 +204,7 @@ func newEnvSync(t *testing.T, limits httpapi.Limits, requireFrozenSync bool) *te
 	e.orders = &fakeOrders{}
 	e.srv = httpapi.New(httpapi.Deps{
 		Identity: e.identity, Ledger: fakeLedger{}, Orders: e.orders, Redis: rdb, Limits: limits,
-		AllowedOrigins: []string{"http://localhost:5173"}, RequireFrozenSync: requireFrozenSync,
+		AllowedOrigins: []string{"http://localhost:5173"}, RequireFrozenSync: requireFrozenSync, MarketData: "http://127.0.0.1:1",
 		PublicKey: func(context.Context) (ed25519.PublicKey, error) { return e.identity.pub(), nil },
 		Now:       func() time.Time { return time.Unix(0, e.now.Load()) },
 	})

@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package tickless.candles.v1;
+
+import "tickless/common/v1/common.proto";
+
+service CandlesService {
+  // GetCandles returns OHLCV candles of a market, newest first.
+  rpc GetCandles(GetCandlesRequest) returns (GetCandlesResponse);
+}
+
+// Candle values are integers in the market grid: prices in ticks, volume in
+// lots (see ADR 0001). Callers format them with the market configuration.
+message Candle {
+  // Start of the bucket, unix seconds (UTC).
+  int64 open_time_unix = 1;
+  int64 open = 2;
+  int64 high = 3;
+  int64 low = 4;
+  int64 close = 5;
+  // Sum of trade quantities, in lots.
+  int64 volume_lots = 6;
+  // Sum of price*quantity in tick-lots, as a decimal string (can exceed int64).
+  string turnover = 7;
+  int64 trades = 8;
+}
+
+message GetCandlesRequest {
+  string market = 1;
+  // One of 1m, 5m, 15m, 1h, 4h, 1d.
+  string interval = 2;
+  // Optional range on open_time: from_unix <= open_time < to_unix (0 = open ended).
+  int64 from_unix = 3;
+  int64 to_unix = 4;
+  // Maximum number of candles (default 500, max 2000).
+  int32 limit = 5;
+}
+
+message GetCandlesResponse {
+  repeated Candle candles = 1;
+}
+
+// CandleUpdate is published to candles.live (key: market) whenever trades
+// change a candle. It carries the complete current state of that candle.
+message CandleUpdate {
+  tickless.common.v1.EventMeta meta = 1;
+  string market = 2;
+  string interval = 3;
+  Candle candle = 4;
+}

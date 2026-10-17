@@ -5,6 +5,7 @@ go 1.27.2
 replace github.com/tickless/pkg => ../pkg
 
 require (
+	github.com/coder/websocket v1.8.15
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/redis/go-redis/v9 v9.23.0
 	github.com/stretchr/testify v1.12.1

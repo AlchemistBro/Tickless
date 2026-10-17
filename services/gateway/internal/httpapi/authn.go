@@ -115,15 +115,19 @@ func (s *Server) denyAuth(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 func (s *Server) fromToken(r *http.Request) (Principal, error) {
-	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-	v, err := s.verifier(r.Context(), false)
+	return s.verifyToken(r.Context(), strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
+}
+
+// verifyToken validates an access token (header or WebSocket auth message).
+func (s *Server) verifyToken(ctx context.Context, token string) (Principal, error) {
+	v, err := s.verifier(ctx, false)
 	if err != nil {
 		return Principal{}, err
 	}
 	c, err := v.Verify(token, s.d.Now())
 	if err != nil {
 		// The identity service may have restarted with a new ephemeral key: refetch once.
-		if v2, ferr := s.verifier(r.Context(), true); ferr == nil && v2 != v {
+		if v2, ferr := s.verifier(ctx, true); ferr == nil && v2 != v {
 			c, err = v2.Verify(token, s.d.Now())
 		}
 		if err != nil {

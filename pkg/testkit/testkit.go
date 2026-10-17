@@ -62,3 +62,32 @@ func Kafka(t testing.TB, topics ...string) []string {
 	}
 	return brokers
 }
+
+// ClickHouse starts a throwaway ClickHouse server and returns the native
+// protocol address (host:port), user, password and database name.
+func ClickHouse(t testing.TB) (addr, user, password, database string) {
+	t.Helper()
+	ctx := context.Background()
+	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        "clickhouse/clickhouse-server:24.8-alpine",
+			ExposedPorts: []string{"9000/tcp", "8123/tcp"},
+			Env:          map[string]string{"CLICKHOUSE_USER": "test", "CLICKHOUSE_PASSWORD": "test", "CLICKHOUSE_DB": "test", "CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT": "1"},
+			WaitingFor:   wait.ForHTTP("/ping").WithPort("8123/tcp").WithStartupTimeout(2 * time.Minute),
+		},
+		Started: true,
+	})
+	if err != nil {
+		t.Fatalf("start clickhouse: %v", err)
+	}
+	t.Cleanup(func() { _ = testcontainers.TerminateContainer(c) })
+	host, err := c.Host(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	port, err := c.MappedPort(ctx, "9000/tcp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return host + ":" + port.Port(), "test", "test", "test"
+}

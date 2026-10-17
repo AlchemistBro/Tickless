@@ -52,6 +52,9 @@ type ConsumerConfig struct {
 	MaxBatch int
 	// LagInterval is how often committed-offset lag is computed (default 5 s).
 	LagInterval time.Duration
+	// OnRevoked, if set, is called when partitions are taken away from this
+	// member (rebalance or loss), so handlers can drop partition-local caches.
+	OnRevoked func()
 }
 
 type tp struct {
@@ -87,8 +90,18 @@ func Consume(ctx context.Context, cfg ConsumerConfig, h Handler) error {
 		kgo.SessionTimeout(10*time.Second),
 		kgo.HeartbeatInterval(3*time.Second),
 		// A partition we no longer own is no longer stalled by us.
-		kgo.OnPartitionsRevoked(func(_ context.Context, _ *kgo.Client, m map[string][]int32) { st.clearStalled(m) }),
-		kgo.OnPartitionsLost(func(_ context.Context, _ *kgo.Client, m map[string][]int32) { st.clearStalled(m) }),
+		kgo.OnPartitionsRevoked(func(_ context.Context, _ *kgo.Client, m map[string][]int32) {
+			st.clearStalled(m)
+			if cfg.OnRevoked != nil {
+				cfg.OnRevoked()
+			}
+		}),
+		kgo.OnPartitionsLost(func(_ context.Context, _ *kgo.Client, m map[string][]int32) {
+			st.clearStalled(m)
+			if cfg.OnRevoked != nil {
+				cfg.OnRevoked()
+			}
+		}),
 	)
 	if err != nil {
 		return err

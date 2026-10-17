@@ -43,7 +43,8 @@ func TestSpecIsValidAndMatchesRoutes(t *testing.T) {
 	e := newEnv(t, generousLimits)
 	got := map[string]bool{}
 	require.NoError(t, chi.Walk(e.srv.Routes().(chi.Routes), func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
-		if method == http.MethodOptions {
+		// WebSocket endpoints are not expressible in OpenAPI; they are specified in docs/websocket.md.
+		if method == http.MethodOptions || strings.HasPrefix(route, "/ws/") {
 			return nil
 		}
 		got[method+" "+strings.TrimSuffix(route, "/")] = true
