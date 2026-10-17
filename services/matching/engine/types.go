@@ -105,6 +105,7 @@ const (
 	CancelIOCRemainder
 	CancelFOKUnfilled
 	CancelSelfTrade
+	RejInvalidOrderID
 )
 
 // Event is one output of the engine. It is a flat struct so that appending it

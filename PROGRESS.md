@@ -23,6 +23,13 @@ Legend: `[x]` done with evidence, `[ ]` open.
 **What was done / what is left:** `services/matching/engine` (book, order index, matching for limit/market, GTC/IOC/FOK, post-only, STP cancel-newest, snapshot/restore/StateHash), 88% coverage under -race, ADRs 0002/0003, `enginebench`, `make bench`. Known limit (documented, ADR 0002): sorted-slice levels degrade to ~30 µs/op at 100k levels with random-depth inserts; Phase 3 `orders` must enforce a price band. Not yet: Kafka wiring and snapshot cadence (Phase 3). Latency timing needs Linux (Windows clock too coarse), so `make bench` runs in a container on Windows.
 
 ## Phase 3 — Identity, gateway, orders, ledger, matching services
+**Plan:**
+1. Engine: bounded deterministic dedupe window of recent order ids (in snapshot) so duplicated commands from the at-least-once outbox can never re-open a finished order (ADR 0004).
+2. `pkg`: otel (traces/metrics/slog trace ids), pgx+goose helpers, outbox (insert + SKIP LOCKED relay + traceparent), kafka (franz-go producer/consumer, trace headers, `CHAOS_DUPLICATE_PUBLISH`), idempotency (processed_events in-tx), auth (EdDSA JWT, HMAC API-key signing), AES-GCM sealing.
+3. Protobuf: `matching.v1` (Command/Event), `ledger.v1`, `orders.v1`, `identity.v1` gRPC + `ledger.v1`/`users.v1` event messages; docs/events.md.
+4. Services (each `services/<n>/{app,cmd,internal,migrations}`): identity (argon2id, JWT, refresh, API keys, email verification token), ledger (double entry, holds, CHECK(amount>=0), settle trades/fees/releases from `matching.events` idempotently, outbox -> `ledger.events`), orders (market rules, price band, order saga PENDING_HOLD -> hold -> outbox command; consumes matching.events for fills; sweeper), matching service (engine per market, snapshot dir, offset-aware replay), gateway (chi REST, JWT + HMAC auth, Redis rate limit + idempotency keys, OpenAPI).
+5. Dockerfile (distroless nonroot) + compose services; `e2e` module: trade flow over REST, invariants via SQL; chaos override duplicating every Kafka publish; trace check in Jaeger.
+6. Fees charged in the received asset, rounded up (toward exchange); trade quote amount rounds down, holds round up. Partitioning of postings/orders is deferred to Phase 9 (SPEC lists it there with EXPLAIN evidence).
 - [ ] Two users trade via REST against seeded balances
 - [ ] Invariants 1, 2, 7 tested
 - [ ] Duplicate-delivery chaos test passes

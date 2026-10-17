@@ -1,0 +1,142 @@
+syntax = "proto3";
+
+package tickless.identity.v1;
+
+service IdentityService {
+  rpc Signup(SignupRequest) returns (SignupResponse);
+  rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Refresh(RefreshRequest) returns (RefreshResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  rpc CreateAPIKey(CreateAPIKeyRequest) returns (CreateAPIKeyResponse);
+  rpc ListAPIKeys(ListAPIKeysRequest) returns (ListAPIKeysResponse);
+  rpc RevokeAPIKey(RevokeAPIKeyRequest) returns (RevokeAPIKeyResponse);
+  // LookupAPIKey is used by the gateway to verify HMAC-signed requests.
+  rpc LookupAPIKey(LookupAPIKeyRequest) returns (LookupAPIKeyResponse);
+  // GetPublicKey returns the Ed25519 key that verifies access tokens.
+  rpc GetPublicKey(GetPublicKeyRequest) returns (GetPublicKeyResponse);
+  rpc SetUserFrozen(SetUserFrozenRequest) returns (SetUserFrozenResponse);
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+}
+
+message SignupRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message SignupResponse {
+  int64 user_id = 1;
+}
+
+message VerifyEmailRequest {
+  string token = 1;
+}
+
+message VerifyEmailResponse {}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message TokenPair {
+  string access_token = 1;
+  int64 access_expires_unix = 2;
+  string refresh_token = 3;
+  int64 refresh_expires_unix = 4;
+}
+
+message LoginResponse {
+  TokenPair tokens = 1;
+}
+
+message RefreshRequest {
+  string refresh_token = 1;
+}
+
+message RefreshResponse {
+  TokenPair tokens = 1;
+}
+
+message LogoutRequest {
+  string refresh_token = 1;
+}
+
+message LogoutResponse {}
+
+message APIKeyInfo {
+  string key_id = 1;
+  string label = 2;
+  bool can_trade = 3;
+  int64 created_at_unix = 4;
+  bool revoked = 5;
+}
+
+message CreateAPIKeyRequest {
+  int64 user_id = 1;
+  string label = 2;
+  bool can_trade = 3;
+}
+
+message CreateAPIKeyResponse {
+  APIKeyInfo key = 1;
+  // Shown exactly once.
+  string secret = 2;
+}
+
+message ListAPIKeysRequest {
+  int64 user_id = 1;
+}
+
+message ListAPIKeysResponse {
+  repeated APIKeyInfo keys = 1;
+}
+
+message RevokeAPIKeyRequest {
+  int64 user_id = 1;
+  string key_id = 2;
+}
+
+message RevokeAPIKeyResponse {}
+
+message LookupAPIKeyRequest {
+  string key_id = 1;
+}
+
+message LookupAPIKeyResponse {
+  int64 user_id = 1;
+  string secret = 2;
+  bool can_trade = 3;
+  string role = 4;
+}
+
+message GetPublicKeyRequest {}
+
+message GetPublicKeyResponse {
+  bytes ed25519_public_key = 1;
+}
+
+message SetUserFrozenRequest {
+  int64 user_id = 1;
+  bool frozen = 2;
+}
+
+message SetUserFrozenResponse {}
+
+message UserInfo {
+  int64 user_id = 1;
+  string email = 2;
+  string role = 3;
+  bool email_verified = 4;
+  bool frozen = 5;
+  int64 created_at_unix = 6;
+}
+
+message ListUsersRequest {
+  int64 after_id = 1;
+  int32 limit = 2;
+}
+
+message ListUsersResponse {
+  repeated UserInfo users = 1;
+}

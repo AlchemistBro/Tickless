@@ -11,16 +11,22 @@ type Engine struct {
 	bids     bookSide
 	asks     bookSide
 	idx      orderIndex
+	seen     idRing
 	pool     pools
 }
 
-// New returns an empty engine for a market.
-func New(market string) *Engine {
+// New returns an empty engine for a market with the default dedupe window.
+func New(market string) *Engine { return NewWithDedupWindow(market, DefaultDedupWindow) }
+
+// NewWithDedupWindow returns an empty engine that remembers the last `window`
+// order ids to reject re-delivered place commands (ADR 0004).
+func NewWithDedupWindow(market string, window int) *Engine {
 	return &Engine{
 		market: market,
 		bids:   bookSide{side: SideBuy},
 		asks:   bookSide{side: SideSell},
 		idx:    newOrderIndex(0),
+		seen:   newIDRing(window),
 	}
 }
 
@@ -76,6 +82,9 @@ func (e *Engine) reject(out []Event, c *Command, r Reason) []Event {
 
 // normalize validates a place command and resolves the default TIF.
 func normalize(c *Command) (TIF, Reason) {
+	if c.OrderID == 0 {
+		return 0, RejInvalidOrderID
+	}
 	if c.Side != SideBuy && c.Side != SideSell {
 		return 0, RejInvalidSide
 	}
@@ -126,9 +135,10 @@ func (e *Engine) place(c *Command, out []Event) []Event {
 	if rej != ReasonNone {
 		return e.reject(out, c, rej)
 	}
-	if e.idx.get(c.OrderID) != nil {
+	if e.idx.get(c.OrderID) != nil || e.seen.has(c.OrderID) {
 		return e.reject(out, c, RejDuplicateOrder)
 	}
+	e.seen.add(c.OrderID)
 	own, opp := &e.bids, &e.asks
 	limit := c.Price
 	if c.Side == SideSell {

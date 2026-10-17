@@ -12,8 +12,9 @@ import (
 //
 //	"TLSN" | u16 version | i64 offset | canonical | sha256(everything before it)
 //
-// canonical = u16 len(market) | market | u64 seq | u64 tradeSeq | u32 n |
-// n * (u64 id | u64 user | u8 side | i64 price | i64 qty | i64 leaves | i64 ts)
+// canonical = u16 len(market) | market | u64 seq | u64 tradeSeq | u32 window |
+// u32 n | n * (u64 id | u64 user | u8 side | i64 price | i64 qty | i64 leaves | i64 ts) |
+// u32 m | m * u64 recentID   (dedupe window, oldest first)
 //
 // Orders are listed bids (worst->best level), then asks (worst->best level),
 // each level in FIFO order, so re-inserting them in sequence reproduces the
@@ -22,9 +23,10 @@ import (
 // canonical part only, so it does not depend on where a snapshot was taken.
 const (
 	snapMagic   = "TLSN"
-	snapVersion = 1
+	snapVersion = 2
 	orderBytes  = 8 + 8 + 1 + 8 + 8 + 8 + 8
 	maxSnapOrds = 1 << 28
+	maxWindow   = 1 << 22
 )
 
 // ErrCorruptSnapshot is returned by Restore for any malformed snapshot.
@@ -35,6 +37,7 @@ func (e *Engine) canonical(buf []byte) []byte {
 	buf = append(buf, e.market...)
 	buf = binary.BigEndian.AppendUint64(buf, e.seq)
 	buf = binary.BigEndian.AppendUint64(buf, e.tradeSeq)
+	buf = binary.BigEndian.AppendUint32(buf, uint32(e.seen.window()))
 	buf = binary.BigEndian.AppendUint32(buf, uint32(e.idx.count))
 	for _, s := range []*bookSide{&e.bids, &e.asks} {
 		for _, l := range s.levels {
@@ -49,6 +52,8 @@ func (e *Engine) canonical(buf []byte) []byte {
 			}
 		}
 	}
+	buf = binary.BigEndian.AppendUint32(buf, uint32(e.seen.n))
+	e.seen.each(func(id uint64) { buf = binary.BigEndian.AppendUint64(buf, id) })
 	return buf
 }
 
@@ -91,17 +96,19 @@ func Restore(data []byte) (*Engine, int64, error) {
 	r := reader{b: body}
 	mlen := int(r.u16())
 	market := string(r.take(mlen))
-	e := New(market)
-	e.seq, e.tradeSeq = r.u64(), r.u64()
+	seq, tradeSeq := r.u64(), r.u64()
+	window := r.u32()
 	n := r.u32()
-	if r.err != nil || n > maxSnapOrds || uint64(len(r.b)) != uint64(n)*orderBytes {
+	if r.err != nil || window == 0 || window > maxWindow || n > maxSnapOrds || uint64(len(r.b)) < uint64(n)*orderBytes+4 {
 		return nil, 0, fmt.Errorf("%w: body", ErrCorruptSnapshot)
 	}
+	e := NewWithDedupWindow(market, int(window))
+	e.seq, e.tradeSeq = seq, tradeSeq
 	for i := uint32(0); i < n; i++ {
 		id, user := r.u64(), r.u64()
 		side := Side(r.take(1)[0])
 		price, qty, leaves, ts := int64(r.u64()), int64(r.u64()), int64(r.u64()), int64(r.u64())
-		if (side != SideBuy && side != SideSell) || price <= 0 || qty <= 0 || leaves <= 0 || leaves > qty {
+		if id == 0 || (side != SideBuy && side != SideSell) || price <= 0 || qty <= 0 || leaves <= 0 || leaves > qty {
 			return nil, 0, fmt.Errorf("%w: order %d fields", ErrCorruptSnapshot, id)
 		}
 		if e.idx.get(id) != nil {
@@ -115,6 +122,17 @@ func Restore(data []byte) (*Engine, int64, error) {
 		}
 		e.levelFor(s, price).push(o)
 		e.idx.put(o)
+	}
+	m := r.u32()
+	if r.err != nil || m > window || uint64(len(r.b)) != uint64(m)*8 {
+		return nil, 0, fmt.Errorf("%w: dedupe window", ErrCorruptSnapshot)
+	}
+	for i := uint32(0); i < m; i++ {
+		id := r.u64()
+		if id == 0 || e.seen.has(id) {
+			return nil, 0, fmt.Errorf("%w: bad recent id", ErrCorruptSnapshot)
+		}
+		e.seen.add(id)
 	}
 	if err := e.CheckInvariants(); err != nil {
 		return nil, 0, fmt.Errorf("%w: %w", ErrCorruptSnapshot, err)

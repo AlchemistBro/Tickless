@@ -204,3 +204,16 @@ func TestBigRoundTrip(t *testing.T) {
 		assert.Zero(t, z.Cmp(v.Big()))
 	}
 }
+
+func TestDivRem(t *testing.T) {
+	m := money.FromInt64
+	cases := []struct{ a, d, q, r int64 }{{7, 2, 3, 1}, {-7, 2, -3, -1}, {7, -2, -3, 1}, {6, 3, 2, 0}, {0, 5, 0, 0}}
+	for _, c := range cases {
+		q, r, err := m(c.a).DivRem(m(c.d))
+		require.NoError(t, err)
+		assert.Equal(t, m(c.q), q)
+		assert.Equal(t, m(c.r), r)
+	}
+	_, _, err := m(1).DivRem(m(0))
+	assert.ErrorIs(t, err, money.ErrDivByZero)
+}

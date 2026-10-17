@@ -2,6 +2,7 @@ package engine_test
 
 import (
 	"math/rand"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,6 +16,8 @@ import (
 // matching rules independently of the optimised engine so the two can be
 // compared event-for-event on random streams.
 type model struct {
+	window   int
+	seen     []uint64
 	orders   []*mOrder
 	seq      uint64
 	tradeSeq uint64
@@ -87,6 +90,9 @@ func (m *model) process(c Command, out []Event) []Event {
 	}
 
 	// Validation (order matters: it decides the reported reason).
+	if c.OrderID == 0 {
+		return rej(RejInvalidOrderID)
+	}
 	if c.Side != SideBuy && c.Side != SideSell {
 		return rej(RejInvalidSide)
 	}
@@ -118,8 +124,12 @@ func (m *model) process(c Command, out []Event) []Event {
 	if tif < GTC || tif > FOK || (c.PostOnly && tif != GTC) {
 		return rej(RejInvalidCombo)
 	}
-	if m.find(c.OrderID) >= 0 {
+	if m.find(c.OrderID) >= 0 || slices.Contains(m.seen, c.OrderID) {
 		return rej(RejDuplicateOrder)
+	}
+	m.seen = append(m.seen, c.OrderID)
+	if len(m.seen) > m.window {
+		m.seen = m.seen[1:]
 	}
 
 	buy := c.Side == SideBuy
@@ -308,7 +318,7 @@ func genCommandsOpt(seed int64, n int, dupIDs bool) []Command {
 
 // runBoth feeds the stream to the engine and the model and compares everything.
 func runBoth(t testing.TB, cmds []Command) (*Engine, []Event) {
-	e, m := New("M"), &model{}
+	e, m := NewWithDedupWindow("M", 64), &model{window: 64}
 	var all, buf, mbuf []Event
 	for i, c := range cmds {
 		buf = e.Process(c, buf[:0])
@@ -481,7 +491,7 @@ func FuzzEngineAgainstModel(f *testing.F) {
 		e, _ := runBoth(t, cmds)
 
 		mid := len(cmds) / 2
-		a := New("M")
+		a := NewWithDedupWindow("M", 64)
 		var buf []Event
 		for _, c := range cmds[:mid] {
 			buf = a.Process(c, buf[:0])
@@ -509,4 +519,31 @@ func FuzzRestore(f *testing.F) {
 		}
 		require.NoError(t, r.CheckInvariants())
 	})
+}
+
+// Duplicated place commands (at-least-once delivery) must be rejected even
+// when the original order already finished and left the book (ADR 0004).
+func TestDuplicatePlaceOfFinishedOrderIsRejected(t *testing.T) {
+	x := newH(t)
+	x.do(limit(1, 1, SideSell, 100, 2))
+	x.do(limit(2, 2, SideBuy, 100, 2)) // order 2 fully filled, gone from the book
+	require.Zero(t, x.e.OpenOrders())
+	evs := x.do(limit(2, 2, SideBuy, 100, 2))
+	require.Len(t, evs, 1)
+	assert.Equal(t, RejDuplicateOrder, evs[0].Reason)
+	assert.Zero(t, x.e.OpenOrders())
+	evs = x.do(limit(0, 2, SideBuy, 100, 2))
+	assert.Equal(t, RejInvalidOrderID, evs[0].Reason)
+}
+
+func TestDedupeWindowEvictsOldest(t *testing.T) {
+	e := NewWithDedupWindow("M", 3)
+	var buf []Event
+	for id := uint64(1); id <= 4; id++ { // ids 1..4 immediately IOC-cancel on an empty book
+		buf = e.Process(Command{Type: CmdPlace, OrderID: id, UserID: 1, Side: SideBuy, OrderType: Limit, TIF: IOC, Price: 10, Qty: 1}, buf[:0])
+	}
+	buf = e.Process(Command{Type: CmdPlace, OrderID: 4, UserID: 1, Side: SideBuy, OrderType: Limit, TIF: IOC, Price: 10, Qty: 1}, buf[:0])
+	assert.Equal(t, RejDuplicateOrder, buf[0].Reason, "id 4 is in the window")
+	buf = e.Process(Command{Type: CmdPlace, OrderID: 1, UserID: 1, Side: SideBuy, OrderType: Limit, TIF: IOC, Price: 10, Qty: 1}, buf[:0])
+	assert.Equal(t, EvAccepted, buf[0].Type, "id 1 was evicted (window 3)")
 }

@@ -207,3 +207,17 @@ func MulDiv(a, b, c Int128, mode Rounding) (Int128, error) {
 	}
 	return FromBig(q)
 }
+
+// DivRem divides a by d (d != 0) truncating toward zero and returns the
+// quotient and remainder (remainder has the sign of a).
+func (a Int128) DivRem(d Int128) (q, r Int128, err error) {
+	if d.IsZero() {
+		return Int128{}, Int128{}, ErrDivByZero
+	}
+	bq, br := new(big.Int).QuoRem(a.Big(), d.Big(), new(big.Int))
+	if q, err = FromBig(bq); err != nil {
+		return Int128{}, Int128{}, err
+	}
+	r, err = FromBig(br)
+	return q, r, err
+}

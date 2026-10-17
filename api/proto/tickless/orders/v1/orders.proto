@@ -1,0 +1,148 @@
+syntax = "proto3";
+
+package tickless.orders.v1;
+
+import "tickless/common/v1/common.proto";
+
+service OrdersService {
+  rpc PlaceOrder(PlaceOrderRequest) returns (PlaceOrderResponse);
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
+  rpc CancelAll(CancelAllRequest) returns (CancelAllResponse);
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
+  rpc ListMarkets(ListMarketsRequest) returns (ListMarketsResponse);
+  // SetMarketStatus halts or resumes a market (admin).
+  rpc SetMarketStatus(SetMarketStatusRequest) returns (SetMarketStatusResponse);
+}
+
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_PENDING_HOLD = 1;
+  ORDER_STATUS_NEW = 2;
+  ORDER_STATUS_PARTIALLY_FILLED = 3;
+  ORDER_STATUS_FILLED = 4;
+  ORDER_STATUS_CANCELLED = 5;
+  ORDER_STATUS_REJECTED = 6;
+}
+
+enum MarketStatus {
+  MARKET_STATUS_UNSPECIFIED = 0;
+  MARKET_STATUS_ACTIVE = 1;
+  MARKET_STATUS_HALTED = 2;
+}
+
+message Market {
+  string symbol = 1;
+  string base_asset = 2;
+  string quote_asset = 3;
+  uint32 base_decimals = 4;
+  uint32 quote_decimals = 5;
+  // Quote smallest units per price tick.
+  int64 tick_size = 6;
+  // Base smallest units per lot.
+  int64 lot_size = 7;
+  // Minimum notional in quote smallest units.
+  string min_notional = 8;
+  uint32 maker_fee_bps = 9;
+  uint32 taker_fee_bps = 10;
+  // Allowed limit price band in ticks (bounds the number of live price levels).
+  int64 min_price_ticks = 11;
+  int64 max_price_ticks = 12;
+  MarketStatus status = 13;
+}
+
+message PlaceOrderRequest {
+  int64 user_id = 1;
+  string market = 2;
+  tickless.common.v1.Side side = 3;
+  // "limit" or "market".
+  string order_type = 4;
+  // "GTC", "IOC", "FOK"; empty = GTC for limit, IOC for market.
+  string time_in_force = 5;
+  bool post_only = 6;
+  // Decimal strings in whole units (e.g. "0.5" BTC, "50000.25" USDT).
+  string price = 7;
+  string quantity = 8;
+  string client_order_id = 9;
+}
+
+message Order {
+  uint64 id = 1;
+  int64 user_id = 2;
+  string market = 3;
+  tickless.common.v1.Side side = 4;
+  string order_type = 5;
+  string time_in_force = 6;
+  bool post_only = 7;
+  string price = 8;
+  string quantity = 9;
+  string filled_quantity = 10;
+  OrderStatus status = 11;
+  string client_order_id = 12;
+  string reject_reason = 13;
+  int64 created_at_unix_nano = 14;
+  int64 updated_at_unix_nano = 15;
+}
+
+message PlaceOrderResponse {
+  Order order = 1;
+  // True when client_order_id matched an existing order (idempotent replay).
+  bool duplicate = 2;
+}
+
+message CancelOrderRequest {
+  int64 user_id = 1;
+  uint64 order_id = 2;
+}
+
+message CancelOrderResponse {
+  Order order = 1;
+}
+
+message CancelAllRequest {
+  int64 user_id = 1;
+  // Empty = all markets.
+  string market = 2;
+}
+
+message CancelAllResponse {
+  uint32 requested = 1;
+}
+
+message GetOrderRequest {
+  int64 user_id = 1;
+  uint64 order_id = 2;
+}
+
+message GetOrderResponse {
+  Order order = 1;
+}
+
+message ListOrdersRequest {
+  int64 user_id = 1;
+  string market = 2;
+  // Only open orders when true.
+  bool open_only = 3;
+  // Return orders with id < before_id (0 = newest).
+  uint64 before_id = 4;
+  int32 limit = 5;
+}
+
+message ListOrdersResponse {
+  repeated Order orders = 1;
+}
+
+message ListMarketsRequest {}
+
+message ListMarketsResponse {
+  repeated Market markets = 1;
+}
+
+message SetMarketStatusRequest {
+  string market = 1;
+  MarketStatus status = 2;
+}
+
+message SetMarketStatusResponse {
+  Market market = 1;
+}

@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package tickless.users.v1;
+
+import "tickless/common/v1/common.proto";
+
+// Events on users.events (key: user id).
+
+message UserSignedUp {
+  tickless.common.v1.EventMeta meta = 1;
+  int64 user_id = 2;
+  string email = 3;
+  // Opaque email verification token; consumed by the notifier to build the link.
+  string verification_token = 4;
+}
+
+message UserFrozen {
+  tickless.common.v1.EventMeta meta = 1;
+  int64 user_id = 2;
+  bool frozen = 3;
+}
