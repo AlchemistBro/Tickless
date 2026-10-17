@@ -124,3 +124,12 @@ func VerifyRequest(secret string, ts int64, method, pathQuery string, body []byt
 	}
 	return nil
 }
+
+// RandomBytes returns n cryptographically random bytes.
+func RandomBytes(n int) []byte {
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		panic(err) // crypto/rand failure is unrecoverable
+	}
+	return b
+}

@@ -2,6 +2,8 @@ go 1.27.2
 
 use (
 	./pkg
+	./services/identity
 	./services/ledger
 	./services/matching
+	./services/orders
 )
