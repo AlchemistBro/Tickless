@@ -13,6 +13,8 @@ jobs:
         with: {go-version-file: pkg/go.mod}
       - uses: golangci/golangci-lint-action@v8
         with: {version: v2.14.0, working-directory: pkg}
+      - uses: golangci/golangci-lint-action@v8
+        with: {version: v2.14.0, working-directory: services/matching}
       - uses: bufbuild/buf-action@v1
         with:
           lint: true
@@ -30,6 +32,8 @@ jobs:
         run: make test
       - name: Short fuzz run
         run: make fuzz
+      - name: Engine targets (SPEC §5)
+        run: make bench
 
   compose-smoke:
     runs-on: ubuntu-latest

@@ -13,9 +13,14 @@ Legend: `[x]` done with evidence, `[ ]` open.
 **What was done / what is left:** SPEC/CLAUDE/PROGRESS, `pkg/money` (Int128, Asset parse/format, Fee, MarketSpec, differential fuzz vs math/big), buf + common proto, compose stack, observability configs, GitHub+GitLab CI, Makefile. Left: CI pipelines are unverified until pushed to a remote; `buf breaking` only runs on PRs/MRs (needs a baseline); no service metrics yet (phase 3).
 
 ## Phase 2 — Matching engine as a library
-- [ ] §5 engine targets met and printed by `make bench`
-- [ ] Invariants 6 and 8 tests pass
-- [ ] pprof profiles in docs/perf/engine/
+**Plan:** module `services/matching`, package `engine` (int64 ticks/lots, ADR 0001). Sorted-slice price levels (best at tail) + intrusive FIFO lists + custom open-addressing order index + slab pools => 0 allocs after warm-up. `Process(cmd, out []Event) []Event` is a pure deterministic state machine (time comes from the command). Market orders = IOC/FOK with protective price bound; STP cancels the taker (newest); cancel-all is expanded by `orders` into single cancels. Snapshot = canonical binary + sha256, includes caller's Kafka offset. Tests: table tests per type/TIF, model-based differential test vs naive reference, fuzz (engine vs model, snapshot parser), snapshot+replay hash equality at every cut point, invariant checker. `cmd/enginebench` measures throughput/p99/allocs against SPEC §5 and exits non-zero on miss; `make bench` runs it plus `go test -bench`; pprof saved to docs/perf/engine/. ADRs 0002 (concurrency model + book structure), 0003 (event log and recovery).
+- [x] §5 engine targets met and printed by `make bench` — Linux container, 5M mixed cmds: 6.49 M cmd/s (≥1M), p99 487 ns (<20 µs), 0 mallocs in 5M cmds; `-benchmem`: BenchmarkMixed/Add/Match 0 allocs/op (docs/perf/engine/bench.txt, README.md)
+- [x] Invariant 6 (replay from any snapshot) — `TestSnapshotReplayEqualsUninterruptedRun` (~60 cut points, events + final hash identical), `FuzzEngineAgainstModel` (midpoint snapshot)
+- [x] Invariant 8 (filled ≤ qty) — `TestFilledNeverExceedsQuantityAndConservation` (filled+cancelled+resting == qty for every order, 10 seeds); fee rounding toward exchange: `FuzzFeeNeverUnderCollects` (pkg/money)
+- [x] Model-based + fuzz — `TestEngineMatchesNaiveModel` (40 seeds x 3000 cmds, event-for-event vs naive reference), `FuzzEngineAgainstModel` and `FuzzRestore` 45 s each with no findings; `make fuzz` green
+- [x] pprof profiles in docs/perf/engine/ — cpu.pprof, allocs.pprof (+ *_top.txt)
+
+**What was done / what is left:** `services/matching/engine` (book, order index, matching for limit/market, GTC/IOC/FOK, post-only, STP cancel-newest, snapshot/restore/StateHash), 88% coverage under -race, ADRs 0002/0003, `enginebench`, `make bench`. Known limit (documented, ADR 0002): sorted-slice levels degrade to ~30 µs/op at 100k levels with random-depth inserts; Phase 3 `orders` must enforce a price band. Not yet: Kafka wiring and snapshot cadence (Phase 3). Latency timing needs Linux (Windows clock too coarse), so `make bench` runs in a container on Windows.
 
 ## Phase 3 — Identity, gateway, orders, ledger, matching services
 - [ ] Two users trade via REST against seeded balances

@@ -6,6 +6,7 @@ lint:
   image: golangci/golangci-lint:v2.14.0
   script:
     - cd pkg && golangci-lint run ./...
+    - cd services/matching && golangci-lint run ./...
 
 buf:
   stage: lint
@@ -21,6 +22,7 @@ test:
     - apt-get update -qq && apt-get install -y -qq make
     - make test
     - make fuzz
+    - make bench
 
 compose-smoke:
   stage: smoke

@@ -1,0 +1,23 @@
+File: enginebench
+Build ID: 298b77bdae96d6406ea77d1ce035ac3b01b6b9a6
+Type: cpu
+Time: 2026-10-17 17:30:59 MSK
+Duration: 845.30ms, Total samples = 850ms (100.56%)
+Showing nodes accounting for 740ms, 87.06% of 850ms total
+Showing top 15 nodes out of 36
+      flat  flat%   sum%        cum   cum%
+     140ms 16.47% 16.47%      150ms 17.65%  github.com/tickless/matching/engine.(*Engine).emit (inline)
+     100ms 11.76% 28.24%      110ms 12.94%  github.com/tickless/matching/engine.(*orderIndex).get (inline)
+      80ms  9.41% 37.65%       80ms  9.41%  github.com/tickless/matching/engine.(*bookSide).search (inline)
+      60ms  7.06% 44.71%      740ms 87.06%  github.com/tickless/matching/internal/workload.(*Gen).process (inline)
+      50ms  5.88% 50.59%      130ms 15.29%  github.com/tickless/matching/engine.(*Engine).levelFor
+      50ms  5.88% 56.47%      100ms 11.76%  github.com/tickless/matching/engine.(*orderIndex).del
+      50ms  5.88% 62.35%       50ms  5.88%  github.com/tickless/matching/engine.hashID (inline)
+      40ms  4.71% 67.06%       40ms  4.71%  github.com/tickless/matching/engine.(*level).unlink (inline)
+      30ms  3.53% 70.59%      310ms 36.47%  github.com/tickless/matching/engine.(*Engine).cancel
+      30ms  3.53% 74.12%      830ms 97.65%  github.com/tickless/matching/internal/workload.(*Gen).Step
+      30ms  3.53% 77.65%       30ms  3.53%  runtime.asyncPreempt
+      20ms  2.35% 80.00%      680ms 80.00%  github.com/tickless/matching/engine.(*Engine).Process
+      20ms  2.35% 82.35%      350ms 41.18%  github.com/tickless/matching/engine.(*Engine).place
+      20ms  2.35% 84.71%       20ms  2.35%  github.com/tickless/matching/engine.(*orderIndex).insert (inline)
+      20ms  2.35% 87.06%       20ms  2.35%  github.com/tickless/matching/engine.(*pools).getOrder (inline)

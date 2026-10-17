@@ -1,0 +1,18 @@
+File: enginebench
+Build ID: 298b77bdae96d6406ea77d1ce035ac3b01b6b9a6
+Type: alloc_objects
+Time: 2026-10-17 17:31:01 MSK
+Showing nodes accounting for 10099, 99.68% of 10131 total
+Dropped 17 nodes (cum <= 50)
+Showing top 10 nodes out of 24
+      flat  flat%   sum%        cum   cum%
+      5225 51.57% 51.57%       5225 51.57%  runtime.mallocgc
+      3277 32.35% 83.92%       3277 32.35%  compress/gzip.NewWriterLevel
+      1489 14.70% 98.62%       4766 47.04%  runtime/pprof.newProfileBuilder
+       108  1.07% 99.68%        122  1.20%  github.com/tickless/matching/engine.NewSized
+         0     0% 99.68%        122  1.20%  github.com/tickless/matching/internal/workload.NewEngine (inline)
+         0     0% 99.68%        130  1.28%  main.main
+         0     0% 99.68%        125  1.23%  main.main.func1
+         0     0% 99.68%       4681 46.20%  runtime.acquireSudog
+         0     0% 99.68%        512  5.05%  runtime.allocm
+         0     0% 99.68%       4681 46.20%  runtime.gcBgMarkWorker

@@ -1,0 +1,11 @@
+goos: linux
+goarch: amd64
+pkg: github.com/tickless/matching/engine
+cpu: Intel(R) Core(TM) Ultra 7 155H
+BenchmarkMixed-22                   	13989670	       179.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAdd-22                     	 7462752	       286.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMatch-22                   	28308958	        84.10 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSnapshot-22                	     334	   7139583 ns/op	12360457 B/op	      37 allocs/op
+BenchmarkDeepBookRandomInsert-22    	   86714	     30098 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/tickless/matching/engine	14.327s

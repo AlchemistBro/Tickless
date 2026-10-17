@@ -28,10 +28,18 @@ proto:
 	buf generate
 
 fuzz:
-	cd pkg && for f in $$(go test ./money -list '^Fuzz'); do case $$f in Fuzz*) go test ./money -run '^$$' -fuzz "^$$f\$$" -fuzztime 15s || exit 1;; esac; done
+	cd pkg && for f in $$(go test ./money -list '^Fuzz' | grep '^Fuzz'); do go test ./money -run '^$$' -fuzz "^$$f\$$" -fuzztime 15s || exit 1; done
+	cd services/matching && for f in FuzzEngineAgainstModel FuzzRestore; do go test ./engine -run '^$$' -fuzz "^$$f\$$" -fuzztime 20s || exit 1; done
 
+# Engine benchmarks print PASS/FAIL against SPEC §5 and save pprof profiles.
+# Run on Linux (container on Windows): Windows' clock is too coarse to time single commands.
+BENCH_CMD := cd services/matching && go run ./cmd/enginebench -cpuprofile ../../docs/perf/engine/cpu.pprof -memprofile ../../docs/perf/engine/allocs.pprof && go test ./engine -run '^$$' -bench . -benchmem -benchtime 2s | tee ../../docs/perf/engine/bench.txt
 bench:
-	@echo "no benchmarks yet (engine arrives in phase 2)"
+ifeq ($(OS),Windows_NT)
+	@MSYS_NO_PATHCONV=1 docker run --rm -v "$(CURDIR):/src" -v tickless-gomod:/go/pkg/mod -v tickless-gobuild:/root/.cache/go-build -w /src $(GO_IMAGE) bash -c "$(BENCH_CMD)"
+else
+	@$(BENCH_CMD)
+endif
 
 up:
 	$(COMPOSE) up -d --wait --remove-orphans
