@@ -7,4 +7,4 @@ groups:
         labels: {severity: page}
         annotations:
           summary: "Scrape target {{ $labels.job }}/{{ $labels.instance }} is down"
-          runbook_url: "https://github.com/tickless/tickless/blob/main/docs/runbooks/target-down.md"
+          runbook_url: "https://github.com/AlchemistBro/stockMarket/blob/main/docs/runbooks/target-down.md"
