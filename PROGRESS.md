@@ -53,6 +53,12 @@ Source: [docs/review/phase-3.1-fixes.md](docs/review/phase-3.1-fixes.md).
 **What was done / what is left:** all eight review items fixed with tests; `make up` now rebuilds images (`--build`: the e2e suite caught a stale gateway image); unit, integration, e2e and lint are green locally. Known remaining limits: a transient handler error still blocks the other partitions of the same consumer while it retries (only permanent errors stall one partition); orders/gateway consumers have no permanent-error classification yet (their lag is visible and alerted); `kafka_consumer_lag` is computed every 5 s.
 
 ## Phase 4 — Market data and candles
+**Plan:**
+1. `services/marketdata`: consumes `matching.events` (no consumer group; per-partition offsets stored in Redis with the snapshots, so an instance restarts from its snapshot) and `candles.live`. A pure `market` package keeps per-market book (levels from `BOOK_DELTA`), last trades, 24 h ticker. Redis snapshots (`md:snap:{market}`, `md:offsets`). Public REST (`/v1/market/...`) and public WebSocket (`/ws/public`, coder/websocket) with channels `trades.{m}`, `book.{m}` (snapshot, then deltas with `seq` + `prev` so a client detects gaps and resyncs), `ticker.{m}`, `candles.{m}.{interval}`.
+2. `services/candles`: dedupes by `(market, trade_id)` and inserts trades into ClickHouse `trades` (MergeTree); six `AggregatingMergeTree` materialized views (1m, 5m, 15m, 1h, 4h, 1d); gRPC `GetCandles`; publishes live candle updates to `candles.live`. ADR 0008 (why ClickHouse).
+3. Gateway: reverse proxy for the public market data (REST + WS upgrade, rate limited); private WebSocket `/ws/private` (own orders, fills, balances from `matching.events` + `ledger.events`, filtered per authenticated user).
+4. Web UI skeleton (user request): widget-based terminal in `web/` where every panel is one self-contained file following a tiny contract, so new panels can be generated ("vibe-coded") and dropped in; the full Phase 10 scope (order entry, admin, Playwright) stays in Phase 10.
+5. Tests: book rebuilt by a WS client equals engine state (incl. gap -> resync), candles of all intervals equal an independent aggregation of the trades, delivery latency p99, ClickHouse and Redis integration tests, e2e through the gateway.
 - [ ] WS client rebuilds exact book from snapshot + deltas (test vs engine state)
 - [ ] Candles for all intervals match trades
 - [ ] WS latency target met
