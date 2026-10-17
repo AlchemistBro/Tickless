@@ -1,0 +1,10 @@
+groups:
+  - name: infra
+    rules:
+      - alert: TargetDown
+        expr: up == 0
+        for: 1m
+        labels: {severity: page}
+        annotations:
+          summary: "Scrape target {{ $labels.job }}/{{ $labels.instance }} is down"
+          runbook_url: "https://github.com/tickless/tickless/blob/main/docs/runbooks/target-down.md"

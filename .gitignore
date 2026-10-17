@@ -1,0 +1,8 @@
+.idea/
+.vscode/
+*.test
+*.out
+node_modules/
+dist/
+.env
+/bin/

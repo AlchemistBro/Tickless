@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package tickless.common.v1;
+
+// Side of an order.
+enum Side {
+  SIDE_UNSPECIFIED = 0;
+  SIDE_BUY = 1;
+  SIDE_SELL = 2;
+}
+
+// Amount is an exact integer count of an asset's smallest unit
+// (satoshi, wei, 1e-6 USDT), encoded as a base-10 string so that values
+// above 2^63 survive every language. Never a float. See ADR 0001.
+message Amount {
+  string units = 1;
+}
+
+// EventMeta is carried by every domain event for idempotent consumption
+// and tracing across async hops.
+message EventMeta {
+  // Globally unique event id (UUIDv7). Consumers dedupe on this.
+  string event_id = 1;
+  // W3C traceparent of the producing span, for cross-hop trace links.
+  string traceparent = 2;
+  // Producer wall clock, unix nanoseconds. Informational only.
+  int64 produced_at_unix_nano = 3;
+}

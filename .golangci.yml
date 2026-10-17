@@ -1,0 +1,32 @@
+version: "2"
+run:
+  timeout: 5m
+linters:
+  default: standard
+  enable:
+    - errorlint
+    - gosec
+    - bodyclose
+    - misspell
+    - unconvert
+    - forbidigo
+  settings:
+    forbidigo:
+      forbid:
+        - pattern: 'float(32|64)\('
+          msg: "no floats in money paths (ADR 0001); use pkg/money"
+  exclusions:
+    paths:
+      - pkg/gen
+    rules:
+      - path: _test\.go
+        linters: [gosec, forbidigo]
+      # Int128 is two's complement over (int64 hi, uint64 lo); the int64<->uint64
+      # reinterpretations are the representation itself and are fuzzed vs math/big.
+      - path: pkg/money/int128\.go
+        text: "G115"
+        linters: [gosec]
+formatters:
+  enable: [gofmt, goimports]
+  exclusions:
+    paths: [pkg/gen]

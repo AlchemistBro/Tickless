@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: tickless
+    folder: Tickless
+    type: file
+    allowUiUpdates: false
+    options: {path: /var/lib/grafana/dashboards}

@@ -1,0 +1,22 @@
+{
+  "uid": "tickless-overview",
+  "title": "Overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {"from": "now-15m", "to": "now"},
+  "panels": [
+    {"id": 1, "type": "stat", "title": "Targets up", "gridPos": {"x": 0, "y": 0, "w": 6, "h": 5},
+     "datasource": {"type": "prometheus", "uid": "prometheus"},
+     "targets": [{"refId": "A", "expr": "sum(up)"}]},
+    {"id": 2, "type": "stat", "title": "Targets down", "gridPos": {"x": 6, "y": 0, "w": 6, "h": 5},
+     "datasource": {"type": "prometheus", "uid": "prometheus"},
+     "targets": [{"refId": "A", "expr": "count(up == 0) or vector(0)"}]},
+    {"id": 3, "type": "timeseries", "title": "Spans received by collector (/s)", "gridPos": {"x": 12, "y": 0, "w": 12, "h": 5},
+     "datasource": {"type": "prometheus", "uid": "prometheus"},
+     "targets": [{"refId": "A", "expr": "sum(rate(otelcol_receiver_accepted_spans_total[1m]))"}]},
+    {"id": 4, "type": "timeseries", "title": "Up by job", "gridPos": {"x": 0, "y": 5, "w": 24, "h": 8},
+     "datasource": {"type": "prometheus", "uid": "prometheus"},
+     "targets": [{"refId": "A", "expr": "sum by (job) (up)", "legendFormat": "{{job}}"}]}
+  ]
+}

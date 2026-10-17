@@ -1,0 +1,10 @@
+route:
+  receiver: default
+  group_by: [alertname, job]
+  group_wait: 5s
+  group_interval: 30s
+  repeat_interval: 1h
+receivers:
+  # Local stack: alerts are inspected in the Alertmanager UI (:9093) and Grafana.
+  # Real receivers (email/pager) are intentionally not configured locally.
+  - name: default
