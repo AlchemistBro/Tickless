@@ -17,6 +17,9 @@ service IdentityService {
   rpc GetPublicKey(GetPublicKeyRequest) returns (GetPublicKeyResponse);
   rpc SetUserFrozen(SetUserFrozenRequest) returns (SetUserFrozenResponse);
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  // ListFrozen returns the ids of all frozen users; the gateway rebuilds its
+  // frozen-user set from it at start.
+  rpc ListFrozen(ListFrozenRequest) returns (ListFrozenResponse);
 }
 
 message SignupRequest {
@@ -139,4 +142,10 @@ message ListUsersRequest {
 
 message ListUsersResponse {
   repeated UserInfo users = 1;
+}
+
+message ListFrozenRequest {}
+
+message ListFrozenResponse {
+  repeated int64 user_ids = 1;
 }

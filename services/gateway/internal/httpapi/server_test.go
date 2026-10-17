@@ -1,6 +1,7 @@
 package httpapi_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http/httptest"
 	"strconv"
@@ -44,6 +45,9 @@ func errCode(t *testing.T, rec *httptest.ResponseRecorder) string {
 }
 
 const orderBody = `{"market":"BTC-USDT","side":"buy","type":"limit","price":"50000.00","quantity":"0.5"}`
+
+// API-key requests must carry a client_order_id (a signed request can be replayed).
+const keyOrderBody = `{"market":"BTC-USDT","side":"buy","type":"limit","price":"50000.00","quantity":"0.5","client_order_id":"bot-1"}`
 
 func TestPublicEndpointsNeedNoAuth(t *testing.T) {
 	e := newEnv(t, generousLimits)
@@ -126,7 +130,7 @@ func TestAPIKeyAuthentication(t *testing.T) {
 
 	// valid signed GET and POST
 	assert.Equal(t, 200, e.do("GET", "/v1/balances", "", signedHeaders("shh", "tk_trade", "GET", "/v1/balances", "", ts)).Code)
-	assert.Equal(t, 201, e.do("POST", "/v1/orders", orderBody, signedHeaders("shh", "tk_trade", "POST", "/v1/orders", orderBody, ts)).Code)
+	assert.Equal(t, 201, e.do("POST", "/v1/orders", keyOrderBody, signedHeaders("shh", "tk_trade", "POST", "/v1/orders", keyOrderBody, ts)).Code)
 	assert.Equal(t, int64(9), e.orders.last.UserId, "order is placed for the key's owner")
 
 	// query string is part of the signature
@@ -134,8 +138,8 @@ func TestAPIKeyAuthentication(t *testing.T) {
 	assert.Equal(t, 401, e.do("GET", "/v1/orders?open=false", "", signedHeaders("shh", "tk_trade", "GET", "/v1/orders?open=true", "", ts)).Code)
 
 	// tampered body, wrong secret, unknown key, stale timestamp, missing signature
-	assert.Equal(t, 401, e.do("POST", "/v1/orders", `{"market":"BTC-USDT","side":"sell","type":"limit","price":"1","quantity":"1"}`,
-		signedHeaders("shh", "tk_trade", "POST", "/v1/orders", orderBody, ts)).Code)
+	assert.Equal(t, 401, e.do("POST", "/v1/orders", `{"market":"BTC-USDT","side":"sell","type":"limit","price":"1","quantity":"1","client_order_id":"x"}`,
+		signedHeaders("shh", "tk_trade", "POST", "/v1/orders", keyOrderBody, ts)).Code)
 	assert.Equal(t, 401, e.do("GET", "/v1/balances", "", signedHeaders("nope", "tk_trade", "GET", "/v1/balances", "", ts)).Code)
 	assert.Equal(t, 401, e.do("GET", "/v1/balances", "", signedHeaders("shh", "tk_unknown", "GET", "/v1/balances", "", ts)).Code)
 	assert.Equal(t, 401, e.do("GET", "/v1/balances", "", signedHeaders("shh", "tk_trade", "GET", "/v1/balances", "", ts-120)).Code, "replay window")
@@ -145,7 +149,7 @@ func TestAPIKeyAuthentication(t *testing.T) {
 
 	// scopes: read-only key cannot trade; keys cannot manage keys or call admin
 	assert.Equal(t, 200, e.do("GET", "/v1/balances", "", signedHeaders("ro-secret", "tk_ro", "GET", "/v1/balances", "", ts)).Code)
-	rec := e.do("POST", "/v1/orders", orderBody, signedHeaders("ro-secret", "tk_ro", "POST", "/v1/orders", orderBody, ts))
+	rec := e.do("POST", "/v1/orders", keyOrderBody, signedHeaders("ro-secret", "tk_ro", "POST", "/v1/orders", keyOrderBody, ts))
 	assert.Equal(t, 403, rec.Code)
 	assert.Equal(t, 403, e.do("GET", "/v1/api-keys", "", signedHeaders("shh", "tk_trade", "GET", "/v1/api-keys", "", ts)).Code)
 	assert.Equal(t, 403, e.do("GET", "/v1/admin/users", "", signedHeaders("adm", "tk_admin", "GET", "/v1/admin/users", "", ts)).Code,
@@ -324,8 +328,9 @@ func TestOrderJSONShape(t *testing.T) {
 	assert.Equal(t, "BTC-USDT", e.orders.last.Market)
 	assert.Equal(t, int64(1), e.orders.last.UserId, "user id comes from the token, never from the body")
 
-	rec = e.do("POST", "/v1/orders", `{"market":"BTC-USDT","side":"buy","type":"limit","price":"50000","quantity":"1","client_order_id":"dup"}`, h)
-	assert.Equal(t, 200, rec.Code, "duplicate client_order_id returns 200")
+	dupBody := `{"market":"BTC-USDT","side":"buy","type":"limit","price":"50000","quantity":"1","client_order_id":"dup"}`
+	assert.Equal(t, 201, e.do("POST", "/v1/orders", dupBody, h).Code, "first submission creates the order")
+	assert.Equal(t, 200, e.do("POST", "/v1/orders", dupBody, h).Code, "duplicate client_order_id returns 200")
 }
 
 func TestSecurityHeadersAndCORS(t *testing.T) {
@@ -355,4 +360,87 @@ func TestUnmatchedRoutesAre404(t *testing.T) {
 	e := newEnv(t, generousLimits)
 	assert.Equal(t, 404, e.do("GET", "/v1/nothing", "", nil).Code)
 	assert.Equal(t, 405, e.do("PUT", "/v1/markets", "", nil).Code)
+}
+
+// Phase 3.1 item 4: a signed request can be replayed inside its validity window.
+// The order service is idempotent by client_order_id, so API-key orders must have one.
+func TestAPIKeyOrdersRequireClientOrderIDAndReplayIsIdempotent(t *testing.T) {
+	e := newEnv(t, generousLimits)
+	e.identity.keys["tk"] = &identityv1.LookupAPIKeyResponse{UserId: 9, Secret: "shh", CanTrade: true, Role: "user"}
+	ts := time.Unix(0, e.now.Load()).Unix()
+
+	rec := e.do("POST", "/v1/orders", orderBody, signedHeaders("shh", "tk", "POST", "/v1/orders", orderBody, ts))
+	assert.Equal(t, 422, rec.Code)
+	assert.Equal(t, "client_order_id_required", errCode(t, rec))
+	assert.Zero(t, e.orders.placed.Load(), "rejected before reaching the order service")
+
+	hdr := signedHeaders("shh", "tk", "POST", "/v1/orders", keyOrderBody, ts)
+	first := e.do("POST", "/v1/orders", keyOrderBody, hdr)
+	require.Equal(t, 201, first.Code)
+	replay := e.do("POST", "/v1/orders", keyOrderBody, hdr) // identical signed request, replayed
+	assert.Equal(t, 200, replay.Code, "the replay is answered as a duplicate")
+	assert.Equal(t, int32(1), e.orders.placed.Load(), "exactly one order exists after the replay")
+
+	// Session (JWT) requests keep working without a client_order_id.
+	assert.Equal(t, 201, e.do("POST", "/v1/orders", orderBody, bearer(e.token(1, "user"))).Code)
+}
+
+// Phase 3.1 item 5: email_verified is enforced for placing orders.
+func TestUnverifiedEmailCannotPlaceOrders(t *testing.T) {
+	e := newEnv(t, generousLimits)
+	unverified := bearer(e.tokenV(4, "user", false))
+	rec := e.do("POST", "/v1/orders", orderBody, unverified)
+	assert.Equal(t, 403, rec.Code)
+	assert.Equal(t, "email_not_verified", errCode(t, rec))
+	assert.Zero(t, e.orders.placed.Load())
+	assert.Equal(t, 200, e.do("GET", "/v1/balances", "", unverified).Code, "read access is unaffected")
+	assert.Equal(t, 202, e.do("DELETE", "/v1/orders/5", "", unverified).Code, "cancelling is always allowed")
+	assert.Equal(t, 201, e.do("POST", "/v1/orders", orderBody, bearer(e.tokenV(4, "user", true))).Code)
+}
+
+// Phase 3.1 item 3: if Redis cannot answer the frozen check, authenticated
+// requests are refused (503) instead of served.
+func TestFrozenCheckFailsClosedWhenRedisIsDown(t *testing.T) {
+	e := newEnv(t, generousLimits)
+	tok := bearer(e.token(1, "user"))
+	require.Equal(t, 200, e.do("GET", "/v1/balances", "", tok).Code)
+	e.redis.Close()
+	rec := e.do("GET", "/v1/balances", "", tok)
+	assert.Equal(t, 503, rec.Code)
+	assert.Equal(t, "unavailable", errCode(t, rec))
+	assert.Equal(t, 503, e.do("POST", "/v1/orders", orderBody, tok).Code)
+	assert.Zero(t, e.orders.placed.Load())
+	assert.Equal(t, 200, e.do("GET", "/v1/markets", "", nil).Code, "public endpoints do not depend on the frozen set")
+}
+
+func TestFrozenSetIsRebuiltFromIdentity(t *testing.T) {
+	e := newEnvSync(t, generousLimits, true)
+	tok3, tok5 := bearer(e.token(3, "user")), bearer(e.token(5, "user"))
+	_, err := e.redis.SAdd(httpapi.FrozenSet, "5", "9") // stale members
+	require.NoError(t, err)
+	e.identity.frozenOnServer = []int64{3, 4}
+
+	// Until the first rebuild completes, authenticated requests are refused.
+	assert.False(t, e.srv.FrozenSynced())
+	assert.Equal(t, 503, e.do("GET", "/v1/balances", "", tok5).Code)
+
+	require.NoError(t, e.srv.SyncFrozen(context.Background()))
+	assert.True(t, e.srv.FrozenSynced())
+	members, err := e.redis.SMembers(httpapi.FrozenSet)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"3", "4"}, members, "the set equals the list from identity: stale members removed, missing ones added")
+	assert.Equal(t, 403, e.do("GET", "/v1/balances", "", tok3).Code)
+	assert.Equal(t, 200, e.do("GET", "/v1/balances", "", tok5).Code)
+
+	// Everyone unfrozen: the key disappears.
+	e.identity.frozenOnServer = nil
+	require.NoError(t, e.srv.SyncFrozen(context.Background()))
+	assert.False(t, e.redis.Exists(httpapi.FrozenSet))
+
+	// identity down: the sync fails and leaves the set untouched.
+	_, err = e.redis.SAdd(httpapi.FrozenSet, "7")
+	require.NoError(t, err)
+	e.identity.listFrozenErr = status.Error(codes.Unavailable, "down")
+	assert.Error(t, e.srv.SyncFrozen(context.Background()))
+	assert.True(t, e.redis.Exists(httpapi.FrozenSet))
 }

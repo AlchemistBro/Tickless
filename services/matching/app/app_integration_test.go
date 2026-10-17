@@ -4,10 +4,12 @@ package app_test
 
 import (
 	"context"
+	"github.com/twmb/franz-go/pkg/kadm"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -193,4 +195,83 @@ func TestRestartMidStreamLosesNothingAndReplaysIdentically(t *testing.T) {
 			assert.True(t, proto.Equal(partition.ToProto(market, r.Event), ev), "%s seq %d differs from the uninterrupted run", market, i+1)
 		}
 	}
+}
+
+// If commands were deleted from the head of the log (finite retention, or a
+// lost snapshot directory next to a truncated log) the book cannot be rebuilt:
+// matching must refuse to start instead of silently running on a wrong book
+// whose sequence numbers restart at 1.
+func TestRefusesToStartWhenResumeOffsetIsBeforeLogStart(t *testing.T) {
+	brokers := testkit.Kafka(t, app.TopicCommands, app.TopicEvents)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	prod, err := kafka.NewProducer(brokers)
+	require.NoError(t, err)
+	defer prod.Close()
+	produce(t, ctx, prod, genCommands(7, 40)) // all on a few partitions
+
+	// Delete the first 5 records of every partition that has at least 5.
+	cl, err := kgo.NewClient(kgo.SeedBrokers(brokers...))
+	require.NoError(t, err)
+	defer cl.Close()
+	adm := kadm.NewClient(cl)
+	ends, err := adm.ListEndOffsets(ctx, app.TopicCommands)
+	require.NoError(t, err)
+	del := kadm.Offsets{}
+	ends.Each(func(lo kadm.ListedOffset) {
+		if lo.Offset >= 5 {
+			del.Add(kadm.Offset{Topic: lo.Topic, Partition: lo.Partition, At: 5})
+		}
+	})
+	require.NotEmpty(t, del, "need a partition with commands")
+	_, err = adm.DeleteRecords(ctx, del)
+	require.NoError(t, err)
+
+	run := func(dir string) error {
+		return app.Run(ctx, app.Config{KafkaBrokers: brokers[0], SnapshotDir: dir, SnapshotEvery: 40, AdminAddr: "127.0.0.1:0"})
+	}
+
+	// 1) No snapshots at all, but the log no longer starts at 0.
+	err = run(t.TempDir())
+	require.ErrorIs(t, err, app.ErrRefuseToStart)
+	assert.Contains(t, err.Error(), "log now starts at 5")
+
+	// 2) A checkpoint older than the log start is just as unusable.
+	dir := t.TempDir()
+	for _, p := range []int{0, 1, 2} { // the test topic has 3 partitions
+		d := filepath.Join(dir, "p"+strconv.Itoa(p))
+		require.NoError(t, os.MkdirAll(d, 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(d, "00000000000000000002.ckpt"), partition.New().Checkpoint(2, 3), 0o600))
+	}
+	err = run(dir)
+	require.ErrorIs(t, err, app.ErrRefuseToStart)
+	assert.Contains(t, err.Error(), "resume at offset 2")
+}
+
+// A checkpoint written for a different partition count is refused on a real topic.
+func TestRefusesToStartWhenPartitionCountChanged(t *testing.T) {
+	brokers := testkit.Kafka(t, app.TopicCommands, app.TopicEvents) // 3 partitions
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	dir := t.TempDir()
+	d := filepath.Join(dir, "p0")
+	require.NoError(t, os.MkdirAll(d, 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(d, "00000000000000000000.ckpt"), partition.New().Checkpoint(0, 6), 0o600))
+	err := app.Run(ctx, app.Config{KafkaBrokers: brokers[0], SnapshotDir: dir, AdminAddr: "127.0.0.1:0"})
+	require.ErrorIs(t, err, app.ErrRefuseToStart)
+	assert.Contains(t, err.Error(), "now has 3")
+}
+
+// Checkpoint files that all fail to restore must not silently become an empty book.
+func TestRefusesToStartWhenCheckpointsAreUnrestorable(t *testing.T) {
+	brokers := testkit.Kafka(t, app.TopicCommands, app.TopicEvents)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	dir := t.TempDir()
+	d := filepath.Join(dir, "p1")
+	require.NoError(t, os.MkdirAll(d, 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(d, "00000000000000000009.ckpt"), []byte("corrupted"), 0o600))
+	err := app.Run(ctx, app.Config{KafkaBrokers: brokers[0], SnapshotDir: dir, AdminAddr: "127.0.0.1:0"})
+	require.ErrorIs(t, err, app.ErrRefuseToStart)
+	assert.Contains(t, err.Error(), "none can be restored")
 }

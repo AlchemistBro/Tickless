@@ -3,6 +3,7 @@ package httpapi_test
 import (
 	"context"
 	"crypto/ed25519"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -27,12 +28,14 @@ import (
 // (nil embedded interface), which makes accidental calls loud.
 type fakeIdentity struct {
 	identityv1.IdentityServiceClient
-	mu        sync.Mutex
-	keys      map[string]*identityv1.LookupAPIKeyResponse
-	lookups   atomic.Int32
-	loginErr  error
-	frozenSet []int64
-	pub       func() ed25519.PublicKey
+	mu             sync.Mutex
+	keys           map[string]*identityv1.LookupAPIKeyResponse
+	lookups        atomic.Int32
+	loginErr       error
+	frozenSet      []int64
+	frozenOnServer []int64
+	listFrozenErr  error
+	pub            func() ed25519.PublicKey
 }
 
 func (f *fakeIdentity) Signup(_ context.Context, r *identityv1.SignupRequest, _ ...grpc.CallOption) (*identityv1.SignupResponse, error) {
@@ -74,6 +77,13 @@ func (f *fakeIdentity) SetUserFrozen(_ context.Context, r *identityv1.SetUserFro
 	return &identityv1.SetUserFrozenResponse{}, nil
 }
 
+func (f *fakeIdentity) ListFrozen(context.Context, *identityv1.ListFrozenRequest, ...grpc.CallOption) (*identityv1.ListFrozenResponse, error) {
+	if f.listFrozenErr != nil {
+		return nil, f.listFrozenErr
+	}
+	return &identityv1.ListFrozenResponse{UserIds: f.frozenOnServer}, nil
+}
+
 func (f *fakeIdentity) GetPublicKey(context.Context, *identityv1.GetPublicKeyRequest, ...grpc.CallOption) (*identityv1.GetPublicKeyResponse, error) {
 	return &identityv1.GetPublicKeyResponse{Ed25519PublicKey: f.pub()}, nil
 }
@@ -98,6 +108,7 @@ type fakeOrders struct {
 	err    error
 	last   *ordersv1.PlaceOrderRequest
 	mu     sync.Mutex
+	seen   map[string]uint64
 }
 
 func sampleOrder(id uint64, market string) *ordersv1.Order {
@@ -113,8 +124,21 @@ func (f *fakeOrders) PlaceOrder(_ context.Context, r *ordersv1.PlaceOrderRequest
 	if f.err != nil {
 		return nil, f.err
 	}
-	n := f.placed.Add(1)
-	return &ordersv1.PlaceOrderResponse{Order: sampleOrder(uint64(n), r.Market), Duplicate: r.ClientOrderId == "dup"}, nil
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.seen == nil {
+		f.seen = map[string]uint64{}
+	}
+	key := fmt.Sprint(r.UserId, "/", r.ClientOrderId)
+	if id, ok := f.seen[key]; ok && r.ClientOrderId != "" {
+		// idempotent by client_order_id, like the real orders service
+		return &ordersv1.PlaceOrderResponse{Order: sampleOrder(id, r.Market), Duplicate: true}, nil
+	}
+	n := uint64(f.placed.Add(1))
+	if r.ClientOrderId != "" {
+		f.seen[key] = n
+	}
+	return &ordersv1.PlaceOrderResponse{Order: sampleOrder(n, r.Market), Duplicate: false}, nil
 }
 
 func (f *fakeOrders) CancelOrder(_ context.Context, r *ordersv1.CancelOrderRequest, _ ...grpc.CallOption) (*ordersv1.CancelOrderResponse, error) {
@@ -163,7 +187,9 @@ type testEnv struct {
 	now      *atomic.Int64
 }
 
-func newEnv(t *testing.T, limits httpapi.Limits) *testEnv {
+func newEnv(t *testing.T, limits httpapi.Limits) *testEnv { return newEnvSync(t, limits, false) }
+
+func newEnvSync(t *testing.T, limits httpapi.Limits, requireFrozenSync bool) *testEnv {
 	t.Helper()
 	mr := miniredis.RunT(t)
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
@@ -178,15 +204,17 @@ func newEnv(t *testing.T, limits httpapi.Limits) *testEnv {
 	e.orders = &fakeOrders{}
 	e.srv = httpapi.New(httpapi.Deps{
 		Identity: e.identity, Ledger: fakeLedger{}, Orders: e.orders, Redis: rdb, Limits: limits,
-		AllowedOrigins: []string{"http://localhost:5173"},
-		PublicKey:      func(context.Context) (ed25519.PublicKey, error) { return e.identity.pub(), nil },
-		Now:            func() time.Time { return time.Unix(0, e.now.Load()) },
+		AllowedOrigins: []string{"http://localhost:5173"}, RequireFrozenSync: requireFrozenSync,
+		PublicKey: func(context.Context) (ed25519.PublicKey, error) { return e.identity.pub(), nil },
+		Now:       func() time.Time { return time.Unix(0, e.now.Load()) },
 	})
 	return e
 }
 
-func (e *testEnv) token(uid int64, role string) string {
-	tok, _, err := e.signer.Issue(auth.Claims{UserID: uid, Role: role, EmailVerified: true}, time.Unix(0, e.now.Load()))
+func (e *testEnv) token(uid int64, role string) string { return e.tokenV(uid, role, true) }
+
+func (e *testEnv) tokenV(uid int64, role string, verified bool) string {
+	tok, _, err := e.signer.Issue(auth.Claims{UserID: uid, Role: role, EmailVerified: verified}, time.Unix(0, e.now.Load()))
 	if err != nil {
 		panic(err)
 	}

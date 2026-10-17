@@ -265,3 +265,11 @@ func (v *server) ListUsers(ctx context.Context, r *identityv1.ListUsersRequest) 
 	}
 	return out, nil
 }
+
+func (v *server) ListFrozen(ctx context.Context, _ *identityv1.ListFrozenRequest) (*identityv1.ListFrozenResponse, error) {
+	ids, err := v.s.ListFrozen(ctx)
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	return &identityv1.ListFrozenResponse{UserIds: ids}, nil
+}

@@ -100,11 +100,16 @@ func (p *Partition) StateHash() [32]byte {
 // Checkpoint serialises every engine; offset is the log offset of the next
 // command to consume.
 //
-//	"TLCK" | i64 offset | u32 count | count * (u32 len | engine snapshot with that offset)
-func (p *Partition) Checkpoint(offset int64) []byte {
+//	"TLC2" | i64 offset | u32 topicPartitions | u32 count | count * (u32 len | engine snapshot with that offset)
+//
+// topicPartitions is the partition count of matching.commands when the
+// checkpoint was written: markets are assigned to partitions by key hash, so a
+// different count would silently remap markets and the checkpoint would be wrong.
+func (p *Partition) Checkpoint(offset int64, topicPartitions int) []byte {
 	var b bytes.Buffer
-	b.WriteString("TLCK")
+	b.WriteString("TLC2")
 	_ = binary.Write(&b, binary.BigEndian, offset)
+	_ = binary.Write(&b, binary.BigEndian, uint32(topicPartitions))
 	_ = binary.Write(&b, binary.BigEndian, uint32(len(p.engines)))
 	for _, m := range p.Markets() {
 		snap := p.engines[m].Snapshot(offset)
@@ -117,36 +122,41 @@ func (p *Partition) Checkpoint(offset int64) []byte {
 // ErrCorruptCheckpoint is returned for malformed checkpoints.
 var ErrCorruptCheckpoint = errors.New("partition: corrupt checkpoint")
 
-// Restore rebuilds a partition from a checkpoint and returns its offset.
-func Restore(data []byte) (*Partition, int64, error) {
-	if len(data) < 16 || string(data[:4]) != "TLCK" {
-		return nil, 0, ErrCorruptCheckpoint
+// Restore rebuilds a partition from a checkpoint and returns its log offset
+// and the topic partition count recorded in it.
+func Restore(data []byte) (p *Partition, offset int64, topicPartitions int, err error) {
+	if len(data) >= 4 && string(data[:4]) == "TLCK" {
+		return nil, 0, 0, fmt.Errorf("%w: written by a version before Phase 3.1 (no partition count), cannot be verified", ErrCorruptCheckpoint)
 	}
-	offset := int64(binary.BigEndian.Uint64(data[4:12]))
-	n := binary.BigEndian.Uint32(data[12:16])
-	rest := data[16:]
-	p := New()
+	if len(data) < 20 || string(data[:4]) != "TLC2" {
+		return nil, 0, 0, ErrCorruptCheckpoint
+	}
+	offset = int64(binary.BigEndian.Uint64(data[4:12]))
+	topicPartitions = int(binary.BigEndian.Uint32(data[12:16]))
+	n := binary.BigEndian.Uint32(data[16:20])
+	rest := data[20:]
+	p = New()
 	for i := uint32(0); i < n; i++ {
 		if len(rest) < 4 {
-			return nil, 0, ErrCorruptCheckpoint
+			return nil, 0, 0, ErrCorruptCheckpoint
 		}
 		l := binary.BigEndian.Uint32(rest[:4])
 		rest = rest[4:]
 		if uint64(len(rest)) < uint64(l) {
-			return nil, 0, ErrCorruptCheckpoint
+			return nil, 0, 0, ErrCorruptCheckpoint
 		}
 		e, off, err := engine.Restore(rest[:l])
 		if err != nil {
-			return nil, 0, fmt.Errorf("%w: %w", ErrCorruptCheckpoint, err)
+			return nil, 0, 0, fmt.Errorf("%w: %w", ErrCorruptCheckpoint, err)
 		}
 		rest = rest[l:]
 		if off != offset {
-			return nil, 0, fmt.Errorf("%w: engine offset %d != checkpoint offset %d", ErrCorruptCheckpoint, off, offset)
+			return nil, 0, 0, fmt.Errorf("%w: engine offset %d != checkpoint offset %d", ErrCorruptCheckpoint, off, offset)
 		}
 		p.engines[e.Market()] = e
 	}
 	if len(rest) != 0 {
-		return nil, 0, ErrCorruptCheckpoint
+		return nil, 0, 0, ErrCorruptCheckpoint
 	}
-	return p, offset, nil
+	return p, offset, topicPartitions, nil
 }

@@ -8,7 +8,8 @@
 //
 // Relay mechanism: polling with SELECT ... FOR UPDATE SKIP LOCKED, plus a
 // transaction-scoped advisory lock so that only one relay instance publishes at
-// a time, which preserves the commit order of messages across replicas.
+// a time, so messages leave in outbox id order (insert order, which can differ
+// slightly from commit order; see ADR 0005).
 package outbox
 
 import (

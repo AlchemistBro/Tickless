@@ -6,16 +6,12 @@ package kafka
 import (
 	"context"
 	"errors"
-	"fmt"
-	"log/slog"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 )
 
@@ -143,121 +139,3 @@ func ExtractContext(ctx context.Context, r *kgo.Record) context.Context {
 
 // Header returns a record header value.
 func Header(r *kgo.Record, key string) string { return headerCarrier{&r.Headers}.Get(key) }
-
-// Handler processes a batch of records in partition order. Returning an error
-// makes the consumer retry the same batch (at-least-once), so handlers MUST be
-// idempotent.
-type Handler func(ctx context.Context, recs []*kgo.Record) error
-
-// ConsumerConfig configures Consume.
-type ConsumerConfig struct {
-	Brokers  []string
-	Group    string
-	Topics   []string
-	MaxBatch int
-}
-
-// Consume runs a consumer-group loop until ctx is cancelled. Offsets are
-// committed only after the handler succeeds. New groups start at the earliest
-// offset so no event is lost. Consumer lag is exported as a metric.
-func Consume(ctx context.Context, cfg ConsumerConfig, h Handler) error {
-	if cfg.MaxBatch == 0 {
-		cfg.MaxBatch = 500
-	}
-	cl, err := kgo.NewClient(
-		kgo.SeedBrokers(cfg.Brokers...),
-		kgo.ConsumerGroup(cfg.Group),
-		kgo.ConsumeTopics(cfg.Topics...),
-		kgo.ConsumeResetOffset(kgo.NewOffset().AtStart()),
-		kgo.DisableAutoCommit(),
-		kgo.BlockRebalanceOnPoll(),
-		// A crashed member is evicted after 10 s (default 45 s) so failover is quick.
-		kgo.SessionTimeout(10*time.Second),
-		kgo.HeartbeatInterval(3*time.Second),
-	)
-	if err != nil {
-		return err
-	}
-	defer cl.Close()
-	// With BlockRebalanceOnPoll, Close (which leaves the group) blocks until
-	// rebalances are allowed again; always allow on the way out.
-	defer cl.AllowRebalance()
-	lag := newLagTracker(cfg.Group)
-
-	backoff := 100 * time.Millisecond
-	for ctx.Err() == nil {
-		fetches := cl.PollRecords(ctx, cfg.MaxBatch)
-		if ctx.Err() != nil {
-			break
-		}
-		fetches.EachError(func(t string, p int32, err error) {
-			slog.Error("kafka fetch error", "topic", t, "partition", p, "err", err)
-		})
-		lag.observe(fetches)
-		var recs []*kgo.Record
-		fetches.EachRecord(func(r *kgo.Record) { recs = append(recs, r) })
-		if len(recs) == 0 {
-			cl.AllowRebalance()
-			continue
-		}
-		for ctx.Err() == nil {
-			if err := h(ctx, recs); err != nil {
-				slog.Error("kafka handler failed, retrying batch", "group", cfg.Group, "err", err, "records", len(recs))
-				select {
-				case <-time.After(backoff):
-				case <-ctx.Done():
-				}
-				backoff = min(backoff*2, 5*time.Second)
-				continue
-			}
-			backoff = 100 * time.Millisecond
-			break
-		}
-		if ctx.Err() != nil {
-			break
-		}
-		if err := cl.CommitRecords(ctx, recs...); err != nil && ctx.Err() == nil {
-			slog.Error("kafka commit failed", "group", cfg.Group, "err", err)
-		}
-		cl.AllowRebalance()
-	}
-	return ctx.Err()
-}
-
-// lagTracker records the number of unconsumed messages per partition
-// (high watermark minus last fetched offset) as the kafka_consumer_lag gauge.
-type lagTracker struct {
-	mu    sync.Mutex
-	group string
-	lag   map[string]int64 // "topic/partition" -> lag
-}
-
-func newLagTracker(group string) *lagTracker {
-	t := &lagTracker{group: group, lag: map[string]int64{}}
-	m := otel.Meter("tickless/kafka")
-	g, err := m.Int64ObservableGauge("kafka_consumer_lag", metric.WithDescription("Messages behind the log end per partition"))
-	if err == nil {
-		_, _ = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
-			t.mu.Lock()
-			defer t.mu.Unlock()
-			for k, v := range t.lag {
-				topic, part, _ := strings.Cut(k, "/")
-				o.ObserveInt64(g, v, metric.WithAttributes(
-					attrString("group", group), attrString("topic", topic), attrString("partition", part)))
-			}
-			return nil
-		}, g)
-	}
-	return t
-}
-
-func (t *lagTracker) observe(f kgo.Fetches) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	f.EachPartition(func(p kgo.FetchTopicPartition) {
-		if n := len(p.Records); n > 0 {
-			last := p.Records[n-1].Offset
-			t.lag[fmt.Sprintf("%s/%d", p.Topic, p.Partition)] = max(p.HighWatermark-last-1, 0)
-		}
-	})
-}

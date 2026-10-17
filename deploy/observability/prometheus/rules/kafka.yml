@@ -1,0 +1,21 @@
+groups:
+  - name: kafka-consumers
+    rules:
+      # A permanent handler error stops one partition of one consumer group.
+      # Everything behind the poison record waits; nothing is skipped.
+      - alert: ConsumerPartitionStalled
+        expr: max by (group, topic, partition) (consumer_partition_stalled) == 1
+        for: 1m
+        labels: {severity: page}
+        annotations:
+          summary: "Consumer group {{ $labels.group }} is stalled on {{ $labels.topic }}[{{ $labels.partition }}]"
+          description: "A permanent error stopped this partition. Other partitions keep running."
+          runbook_url: "https://github.com/AlchemistBro/stockMarket/blob/main/docs/runbooks/consumer-partition-stalled.md"
+      # Lag is computed from COMMITTED offsets, so it also grows while a partition is stalled.
+      - alert: KafkaConsumerLagHigh
+        expr: max by (group, topic, partition) (kafka_consumer_lag) > 1000
+        for: 2m
+        labels: {severity: ticket}
+        annotations:
+          summary: "Consumer group {{ $labels.group }} is {{ $value }} messages behind on {{ $labels.topic }}[{{ $labels.partition }}]"
+          runbook_url: "https://github.com/AlchemistBro/stockMarket/blob/main/docs/runbooks/kafka-consumer-lag-high.md"

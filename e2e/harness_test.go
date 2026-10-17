@@ -299,3 +299,13 @@ func kafkaDuplicates(t *testing.T) (total, dups int) {
 	}
 	return total, dups
 }
+
+// call2 returns the HTTP status of a GET (0 on connection errors); safe inside polling loops.
+func call2(url string) int {
+	res, err := http.Get(url)
+	if err != nil {
+		return 0
+	}
+	defer res.Body.Close()
+	return res.StatusCode
+}

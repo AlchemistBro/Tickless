@@ -92,7 +92,7 @@ func TestRelayPublishesCommittedRowsOnly(t *testing.T) {
 	recs := consume(t, env.brokers, 5, 60*time.Second)
 	require.Len(t, recs, 5)
 	for i, r := range recs {
-		assert.Equal(t, fmt.Sprintf("m%d", i), string(r.Value), "published in commit order")
+		assert.Equal(t, fmt.Sprintf("m%d", i), string(r.Value), "published in id order (here ids and commits are sequential)")
 		assert.Contains(t, kafka.Header(r, "traceparent"), span.SpanContext().TraceID().String(), "trace context propagated")
 	}
 	// Nothing else (in particular not the rolled back row) shows up.

@@ -19,3 +19,7 @@
 | Outbox relay dies between Kafka ack and commit | `TestRelayRepublishesAfterCrashBeforeCommit` |
 | Matching killed mid-stream | `TestRestartMidStreamLosesNothingAndReplaysIdentically` |
 | Duplicate `PlaceOrder` of an already finished order | `TestDuplicatePlaceOfFinishedOrderIsRejected`, `TestRejectedAndCancelledReleaseButDuplicateAndUnknownDoNot` |
+| Poison event in a consumer | `TestPermanentErrorStallsOnlyThatPartition`, `TestUnsettleableEventIsPermanentAndRecorded` (the ledger stalls that partition, records `settlement_failures`, never skips) |
+| Matching log truncated / checkpoints lost / partition count changed | `TestRefusesToStart*` (the service refuses to start) |
+| Ledger history edited | `TestLedgerTablesAreAppendOnly` (UPDATE/DELETE/TRUNCATE on postings and journal entries fail) |
+| Replay of a signed API request | `TestSignedOrderReplayCreatesOneOrder` (client_order_id required, one order) |

@@ -1354,6 +1354,86 @@ func (x *ListUsersResponse) GetUsers() []*UserInfo {
 	return nil
 }
 
+type ListFrozenRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListFrozenRequest) Reset() {
+	*x = ListFrozenRequest{}
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListFrozenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListFrozenRequest) ProtoMessage() {}
+
+func (x *ListFrozenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListFrozenRequest.ProtoReflect.Descriptor instead.
+func (*ListFrozenRequest) Descriptor() ([]byte, []int) {
+	return file_tickless_identity_v1_identity_proto_rawDescGZIP(), []int{27}
+}
+
+type ListFrozenResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserIds       []int64                `protobuf:"varint,1,rep,packed,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListFrozenResponse) Reset() {
+	*x = ListFrozenResponse{}
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListFrozenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListFrozenResponse) ProtoMessage() {}
+
+func (x *ListFrozenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListFrozenResponse.ProtoReflect.Descriptor instead.
+func (*ListFrozenResponse) Descriptor() ([]byte, []int) {
+	return file_tickless_identity_v1_identity_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *ListFrozenResponse) GetUserIds() []int64 {
+	if x != nil {
+		return x.UserIds
+	}
+	return nil
+}
+
 var File_tickless_identity_v1_identity_proto protoreflect.FileDescriptor
 
 const file_tickless_identity_v1_identity_proto_rawDesc = "" +
@@ -1431,7 +1511,10 @@ const file_tickless_identity_v1_identity_proto_rawDesc = "" +
 	"\bafter_id\x18\x01 \x01(\x03R\aafterId\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\"I\n" +
 	"\x11ListUsersResponse\x124\n" +
-	"\x05users\x18\x01 \x03(\v2\x1e.tickless.identity.v1.UserInfoR\x05users2\x91\t\n" +
+	"\x05users\x18\x01 \x03(\v2\x1e.tickless.identity.v1.UserInfoR\x05users\"\x13\n" +
+	"\x11ListFrozenRequest\"/\n" +
+	"\x12ListFrozenResponse\x12\x19\n" +
+	"\buser_ids\x18\x01 \x03(\x03R\auserIds2\xf2\t\n" +
 	"\x0fIdentityService\x12S\n" +
 	"\x06Signup\x12#.tickless.identity.v1.SignupRequest\x1a$.tickless.identity.v1.SignupResponse\x12b\n" +
 	"\vVerifyEmail\x12(.tickless.identity.v1.VerifyEmailRequest\x1a).tickless.identity.v1.VerifyEmailResponse\x12P\n" +
@@ -1444,7 +1527,9 @@ const file_tickless_identity_v1_identity_proto_rawDesc = "" +
 	"\fLookupAPIKey\x12).tickless.identity.v1.LookupAPIKeyRequest\x1a*.tickless.identity.v1.LookupAPIKeyResponse\x12e\n" +
 	"\fGetPublicKey\x12).tickless.identity.v1.GetPublicKeyRequest\x1a*.tickless.identity.v1.GetPublicKeyResponse\x12h\n" +
 	"\rSetUserFrozen\x12*.tickless.identity.v1.SetUserFrozenRequest\x1a+.tickless.identity.v1.SetUserFrozenResponse\x12\\\n" +
-	"\tListUsers\x12&.tickless.identity.v1.ListUsersRequest\x1a'.tickless.identity.v1.ListUsersResponseB\xd8\x01\n" +
+	"\tListUsers\x12&.tickless.identity.v1.ListUsersRequest\x1a'.tickless.identity.v1.ListUsersResponse\x12_\n" +
+	"\n" +
+	"ListFrozen\x12'.tickless.identity.v1.ListFrozenRequest\x1a(.tickless.identity.v1.ListFrozenResponseB\xd8\x01\n" +
 	"\x18com.tickless.identity.v1B\rIdentityProtoP\x01Z;github.com/tickless/pkg/gen/tickless/identity/v1;identityv1\xa2\x02\x03TIX\xaa\x02\x14Tickless.Identity.V1\xca\x02\x14Tickless\\Identity\\V1\xe2\x02 Tickless\\Identity\\V1\\GPBMetadata\xea\x02\x16Tickless::Identity::V1b\x06proto3"
 
 var (
@@ -1459,7 +1544,7 @@ func file_tickless_identity_v1_identity_proto_rawDescGZIP() []byte {
 	return file_tickless_identity_v1_identity_proto_rawDescData
 }
 
-var file_tickless_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_tickless_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
 var file_tickless_identity_v1_identity_proto_goTypes = []any{
 	(*SignupRequest)(nil),         // 0: tickless.identity.v1.SignupRequest
 	(*SignupResponse)(nil),        // 1: tickless.identity.v1.SignupResponse
@@ -1488,6 +1573,8 @@ var file_tickless_identity_v1_identity_proto_goTypes = []any{
 	(*UserInfo)(nil),              // 24: tickless.identity.v1.UserInfo
 	(*ListUsersRequest)(nil),      // 25: tickless.identity.v1.ListUsersRequest
 	(*ListUsersResponse)(nil),     // 26: tickless.identity.v1.ListUsersResponse
+	(*ListFrozenRequest)(nil),     // 27: tickless.identity.v1.ListFrozenRequest
+	(*ListFrozenResponse)(nil),    // 28: tickless.identity.v1.ListFrozenResponse
 }
 var file_tickless_identity_v1_identity_proto_depIdxs = []int32{
 	5,  // 0: tickless.identity.v1.LoginResponse.tokens:type_name -> tickless.identity.v1.TokenPair
@@ -1507,20 +1594,22 @@ var file_tickless_identity_v1_identity_proto_depIdxs = []int32{
 	20, // 14: tickless.identity.v1.IdentityService.GetPublicKey:input_type -> tickless.identity.v1.GetPublicKeyRequest
 	22, // 15: tickless.identity.v1.IdentityService.SetUserFrozen:input_type -> tickless.identity.v1.SetUserFrozenRequest
 	25, // 16: tickless.identity.v1.IdentityService.ListUsers:input_type -> tickless.identity.v1.ListUsersRequest
-	1,  // 17: tickless.identity.v1.IdentityService.Signup:output_type -> tickless.identity.v1.SignupResponse
-	3,  // 18: tickless.identity.v1.IdentityService.VerifyEmail:output_type -> tickless.identity.v1.VerifyEmailResponse
-	6,  // 19: tickless.identity.v1.IdentityService.Login:output_type -> tickless.identity.v1.LoginResponse
-	8,  // 20: tickless.identity.v1.IdentityService.Refresh:output_type -> tickless.identity.v1.RefreshResponse
-	10, // 21: tickless.identity.v1.IdentityService.Logout:output_type -> tickless.identity.v1.LogoutResponse
-	13, // 22: tickless.identity.v1.IdentityService.CreateAPIKey:output_type -> tickless.identity.v1.CreateAPIKeyResponse
-	15, // 23: tickless.identity.v1.IdentityService.ListAPIKeys:output_type -> tickless.identity.v1.ListAPIKeysResponse
-	17, // 24: tickless.identity.v1.IdentityService.RevokeAPIKey:output_type -> tickless.identity.v1.RevokeAPIKeyResponse
-	19, // 25: tickless.identity.v1.IdentityService.LookupAPIKey:output_type -> tickless.identity.v1.LookupAPIKeyResponse
-	21, // 26: tickless.identity.v1.IdentityService.GetPublicKey:output_type -> tickless.identity.v1.GetPublicKeyResponse
-	23, // 27: tickless.identity.v1.IdentityService.SetUserFrozen:output_type -> tickless.identity.v1.SetUserFrozenResponse
-	26, // 28: tickless.identity.v1.IdentityService.ListUsers:output_type -> tickless.identity.v1.ListUsersResponse
-	17, // [17:29] is the sub-list for method output_type
-	5,  // [5:17] is the sub-list for method input_type
+	27, // 17: tickless.identity.v1.IdentityService.ListFrozen:input_type -> tickless.identity.v1.ListFrozenRequest
+	1,  // 18: tickless.identity.v1.IdentityService.Signup:output_type -> tickless.identity.v1.SignupResponse
+	3,  // 19: tickless.identity.v1.IdentityService.VerifyEmail:output_type -> tickless.identity.v1.VerifyEmailResponse
+	6,  // 20: tickless.identity.v1.IdentityService.Login:output_type -> tickless.identity.v1.LoginResponse
+	8,  // 21: tickless.identity.v1.IdentityService.Refresh:output_type -> tickless.identity.v1.RefreshResponse
+	10, // 22: tickless.identity.v1.IdentityService.Logout:output_type -> tickless.identity.v1.LogoutResponse
+	13, // 23: tickless.identity.v1.IdentityService.CreateAPIKey:output_type -> tickless.identity.v1.CreateAPIKeyResponse
+	15, // 24: tickless.identity.v1.IdentityService.ListAPIKeys:output_type -> tickless.identity.v1.ListAPIKeysResponse
+	17, // 25: tickless.identity.v1.IdentityService.RevokeAPIKey:output_type -> tickless.identity.v1.RevokeAPIKeyResponse
+	19, // 26: tickless.identity.v1.IdentityService.LookupAPIKey:output_type -> tickless.identity.v1.LookupAPIKeyResponse
+	21, // 27: tickless.identity.v1.IdentityService.GetPublicKey:output_type -> tickless.identity.v1.GetPublicKeyResponse
+	23, // 28: tickless.identity.v1.IdentityService.SetUserFrozen:output_type -> tickless.identity.v1.SetUserFrozenResponse
+	26, // 29: tickless.identity.v1.IdentityService.ListUsers:output_type -> tickless.identity.v1.ListUsersResponse
+	28, // 30: tickless.identity.v1.IdentityService.ListFrozen:output_type -> tickless.identity.v1.ListFrozenResponse
+	18, // [18:31] is the sub-list for method output_type
+	5,  // [5:18] is the sub-list for method input_type
 	5,  // [5:5] is the sub-list for extension type_name
 	5,  // [5:5] is the sub-list for extension extendee
 	0,  // [0:5] is the sub-list for field type_name
@@ -1537,7 +1626,7 @@ func file_tickless_identity_v1_identity_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tickless_identity_v1_identity_proto_rawDesc), len(file_tickless_identity_v1_identity_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   27,
+			NumMessages:   29,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

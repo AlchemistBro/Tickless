@@ -4,6 +4,7 @@ package store_test
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"testing"
 	"time"
@@ -356,5 +357,86 @@ func TestDatabaseRejectsUnbalancedEntriesAndNegativeBalances(t *testing.T) {
 	require.Error(t, err)
 	assert.True(t, pg.IsCode(err, pg.CodeCheckViolation))
 
+	require.NoError(t, s.Verify(ctx))
+}
+
+// A trade for orders that have no hold can never be settled: ApplyEvents reports
+// a permanent SettlementError naming the event, nothing is applied, and the
+// failure is recorded (the consumer then stalls that partition; it never skips).
+func TestUnsettleableEventIsPermanentAndRecorded(t *testing.T) {
+	s, pool, ctx := newStore(t)
+	_, _, _ = s.Credit(ctx, "s1", 1, "USDT", usdt("60000"))
+	_, _, _ = s.Credit(ctx, "s2", 2, "BTC", btc("2"))
+	// Funds are held, but under OTHER orders (50/51): the trade references orders 10/11 that have no hold.
+	_, _ = s.PlaceHold(ctx, 50, 1, "USDT", usdt("25000"))
+	_, _ = s.PlaceHold(ctx, 51, 2, "BTC", btc("1"))
+	good := tradeEv(1, 1, commonv1.Side_SIDE_BUY, 10, 1, 11, 2, 4_900_000, 20_000, 0, 0)
+
+	in := []store.Incoming{{Ctx: ctx, Event: good, Partition: 4, Offset: 77}}
+	err := s.ApplyEvents(ctx, markets{}, in)
+	var se *store.SettlementError
+	require.ErrorAs(t, err, &se)
+	assert.ErrorIs(t, err, store.ErrNoActiveHold)
+	assert.Equal(t, "BTC-USDT", se.Market)
+	assert.EqualValues(t, 1, se.Seq)
+	assert.EqualValues(t, 4, se.Partition)
+	assert.EqualValues(t, 77, se.Offset)
+
+	require.NoError(t, s.RecordFailure(ctx, se))
+	require.NoError(t, s.RecordFailure(ctx, se)) // idempotent, bumps attempts
+	var n, attempts, off int
+	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*), max(attempts), max(kafka_offset) FROM settlement_failures`).Scan(&n, &attempts, &off))
+	assert.Equal(t, []int{1, 2, 77}, []int{n, attempts, off})
+
+	// The failed transaction rolled back completely (no postings, no dedupe row) ...
+	var processed, trades int
+	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM processed_events`).Scan(&processed))
+	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM journal_entries WHERE kind = 'trade'`).Scan(&trades))
+	assert.Zero(t, processed)
+	assert.Zero(t, trades)
+	require.NoError(t, s.Verify(ctx))
+
+	// ... so once the cause is fixed (holds exist) the very same event settles normally.
+	_, err = s.PlaceHold(ctx, 10, 1, "USDT", usdt("25000"))
+	require.NoError(t, err)
+	_, err = s.PlaceHold(ctx, 11, 2, "BTC", btc("1"))
+	require.NoError(t, err)
+	require.NoError(t, s.ApplyEvents(ctx, markets{}, in))
+	require.NoError(t, s.Verify(ctx))
+}
+
+// Infrastructure-class errors are NOT permanent: an unknown market may just not be loaded yet.
+func TestUnknownMarketIsNotPermanent(t *testing.T) {
+	s, _, ctx := newStore(t)
+	ev := tradeEv(1, 1, commonv1.Side_SIDE_BUY, 1, 1, 2, 2, 100, 1, 0, 0)
+	ev.Market = "NOPE-USDT"
+	err := s.ApplyEvents(ctx, markets{}, []store.Incoming{{Ctx: ctx, Event: ev}})
+	var se *store.SettlementError
+	assert.False(t, errors.As(err, &se))
+	assert.ErrorIs(t, err, store.ErrUnknownMarket)
+}
+
+// Task 3.1-6: postings and journal entries can never be edited or removed, not
+// even by direct SQL.
+func TestLedgerTablesAreAppendOnly(t *testing.T) {
+	s, pool, ctx := newStore(t)
+	_, _, err := s.Credit(ctx, "seed", 1, "USDT", usdt("10"))
+	require.NoError(t, err)
+
+	for name, stmt := range map[string]string{
+		"update posting":       `UPDATE postings SET amount = amount + 1`,
+		"delete posting":       `DELETE FROM postings`,
+		"truncate postings":    `TRUNCATE postings`,
+		"update journal entry": `UPDATE journal_entries SET kind = 'x'`,
+		"delete journal entry": `DELETE FROM journal_entries`,
+		"truncate journal":     `TRUNCATE journal_entries CASCADE`,
+	} {
+		_, err := pool.Exec(ctx, stmt)
+		require.Error(t, err, name)
+		assert.Contains(t, err.Error(), "append-only", name)
+	}
+	var n int
+	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM postings`).Scan(&n))
+	assert.Equal(t, 2, n, "data untouched")
 	require.NoError(t, s.Verify(ctx))
 }

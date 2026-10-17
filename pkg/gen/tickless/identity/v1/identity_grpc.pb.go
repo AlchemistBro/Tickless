@@ -31,6 +31,7 @@ const (
 	IdentityService_GetPublicKey_FullMethodName  = "/tickless.identity.v1.IdentityService/GetPublicKey"
 	IdentityService_SetUserFrozen_FullMethodName = "/tickless.identity.v1.IdentityService/SetUserFrozen"
 	IdentityService_ListUsers_FullMethodName     = "/tickless.identity.v1.IdentityService/ListUsers"
+	IdentityService_ListFrozen_FullMethodName    = "/tickless.identity.v1.IdentityService/ListFrozen"
 )
 
 // IdentityServiceClient is the client API for IdentityService service.
@@ -51,6 +52,9 @@ type IdentityServiceClient interface {
 	GetPublicKey(ctx context.Context, in *GetPublicKeyRequest, opts ...grpc.CallOption) (*GetPublicKeyResponse, error)
 	SetUserFrozen(ctx context.Context, in *SetUserFrozenRequest, opts ...grpc.CallOption) (*SetUserFrozenResponse, error)
 	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
+	// ListFrozen returns the ids of all frozen users; the gateway rebuilds its
+	// frozen-user set from it at start.
+	ListFrozen(ctx context.Context, in *ListFrozenRequest, opts ...grpc.CallOption) (*ListFrozenResponse, error)
 }
 
 type identityServiceClient struct {
@@ -181,6 +185,16 @@ func (c *identityServiceClient) ListUsers(ctx context.Context, in *ListUsersRequ
 	return out, nil
 }
 
+func (c *identityServiceClient) ListFrozen(ctx context.Context, in *ListFrozenRequest, opts ...grpc.CallOption) (*ListFrozenResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListFrozenResponse)
+	err := c.cc.Invoke(ctx, IdentityService_ListFrozen_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IdentityServiceServer is the server API for IdentityService service.
 // All implementations must embed UnimplementedIdentityServiceServer
 // for forward compatibility.
@@ -199,6 +213,9 @@ type IdentityServiceServer interface {
 	GetPublicKey(context.Context, *GetPublicKeyRequest) (*GetPublicKeyResponse, error)
 	SetUserFrozen(context.Context, *SetUserFrozenRequest) (*SetUserFrozenResponse, error)
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
+	// ListFrozen returns the ids of all frozen users; the gateway rebuilds its
+	// frozen-user set from it at start.
+	ListFrozen(context.Context, *ListFrozenRequest) (*ListFrozenResponse, error)
 	mustEmbedUnimplementedIdentityServiceServer()
 }
 
@@ -244,6 +261,9 @@ func (UnimplementedIdentityServiceServer) SetUserFrozen(context.Context, *SetUse
 }
 func (UnimplementedIdentityServiceServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListUsers not implemented")
+}
+func (UnimplementedIdentityServiceServer) ListFrozen(context.Context, *ListFrozenRequest) (*ListFrozenResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListFrozen not implemented")
 }
 func (UnimplementedIdentityServiceServer) mustEmbedUnimplementedIdentityServiceServer() {}
 func (UnimplementedIdentityServiceServer) testEmbeddedByValue()                         {}
@@ -482,6 +502,24 @@ func _IdentityService_ListUsers_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _IdentityService_ListFrozen_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListFrozenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServiceServer).ListFrozen(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IdentityService_ListFrozen_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServiceServer).ListFrozen(ctx, req.(*ListFrozenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // IdentityService_ServiceDesc is the grpc.ServiceDesc for IdentityService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -536,6 +574,10 @@ var IdentityService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListUsers",
 			Handler:    _IdentityService_ListUsers_Handler,
+		},
+		{
+			MethodName: "ListFrozen",
+			Handler:    _IdentityService_ListFrozen_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

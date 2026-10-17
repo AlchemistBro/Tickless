@@ -480,3 +480,21 @@ func (s *Service) BootstrapAdmin(ctx context.Context, email, pw string) error {
 		return err
 	})
 }
+
+// ListFrozen returns the ids of all frozen users.
+func (s *Service) ListFrozen(ctx context.Context) ([]int64, error) {
+	rows, err := s.pool.Query(ctx, `SELECT id FROM users WHERE frozen ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}

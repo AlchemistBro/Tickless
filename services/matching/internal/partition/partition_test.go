@@ -56,10 +56,11 @@ func TestCheckpointRestoreReplayEqualsUninterrupted(t *testing.T) {
 	for _, cut := range []int{0, 1, 17, 999, 1500, 2999, 3000} {
 		p := partition.New()
 		firstRes := run(p, cmds[:cut])
-		data := p.Checkpoint(int64(cut))
-		restored, off, err := partition.Restore(data)
+		data := p.Checkpoint(int64(cut), 6)
+		restored, off, parts, err := partition.Restore(data)
 		require.NoError(t, err)
 		require.Equal(t, int64(cut), off)
+		require.Equal(t, 6, parts)
 		require.Equal(t, p.StateHash(), restored.StateHash())
 
 		rest := run(restored, cmds[cut:])
@@ -82,7 +83,7 @@ func TestReplayAfterCrashReEmitsIdenticalEvents(t *testing.T) {
 	// last checkpoint was at 1000
 	q := partition.New()
 	_ = run(q, cmds[:1000])
-	restored, off, err := partition.Restore(q.Checkpoint(1000))
+	restored, off, _, err := partition.Restore(q.Checkpoint(1000, 6))
 	require.NoError(t, err)
 	replay := run(restored, cmds[off:1500])
 	// the replayed events are exactly the tail of what the crashed process emitted
@@ -91,7 +92,7 @@ func TestReplayAfterCrashReEmitsIdenticalEvents(t *testing.T) {
 
 func TestEmptyPartitionCheckpointKeepsOffset(t *testing.T) {
 	p := partition.New()
-	r, off, err := partition.Restore(p.Checkpoint(1234))
+	r, off, _, err := partition.Restore(p.Checkpoint(1234, 6))
 	require.NoError(t, err)
 	assert.Equal(t, int64(1234), off)
 	assert.Empty(t, r.Markets())
@@ -100,15 +101,15 @@ func TestEmptyPartitionCheckpointKeepsOffset(t *testing.T) {
 func TestRestoreRejectsCorruption(t *testing.T) {
 	p := partition.New()
 	run(p, genStream(3, 200))
-	data := p.Checkpoint(200)
+	data := p.Checkpoint(200, 6)
 	for i := 0; i < len(data); i += 11 {
 		bad := append([]byte(nil), data...)
 		bad[i] ^= 0xff
-		_, _, err := partition.Restore(bad)
+		_, _, _, err := partition.Restore(bad)
 		assert.Error(t, err, "flip byte %d", i)
 	}
-	for _, n := range []int{0, 3, 15, len(data) - 1} {
-		_, _, err := partition.Restore(data[:n])
+	for _, n := range []int{0, 3, 19, len(data) - 1} {
+		_, _, _, err := partition.Restore(data[:n])
 		assert.Error(t, err)
 	}
 }
@@ -152,4 +153,11 @@ func TestToProtoCopiesAllFields(t *testing.T) {
 	assert.Equal(t, &matchingv1.Event{Market: "M", Seq: 9, TimeUnixNano: 8, Type: matchingv1.EventType_EVENT_TYPE_TRADE,
 		Side: commonv1.Side_SIDE_SELL, OrderId: 1, UserId: 2, MakerOrderId: 3, MakerUserId: 4, Price: 5, Qty: 6,
 		TakerLeaves: 7, MakerLeaves: 10, TradeId: 11}, p)
+}
+
+func TestRestoreNamesTheOldCheckpointFormat(t *testing.T) {
+	old := append([]byte("TLCK"), make([]byte, 20)...)
+	_, _, _, err := partition.Restore(old)
+	require.ErrorIs(t, err, partition.ErrCorruptCheckpoint)
+	assert.Contains(t, err.Error(), "before Phase 3.1")
 }

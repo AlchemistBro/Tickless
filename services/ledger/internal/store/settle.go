@@ -22,10 +22,50 @@ type MarketLookup interface {
 // arrives for a market whose configuration is not loaded yet.
 var ErrUnknownMarket = errors.New("ledger: unknown market")
 
-// Incoming is a decoded matching event with the context of its trace.
+// Incoming is a decoded matching event with the context of its trace and its
+// Kafka coordinates (for failure records).
 type Incoming struct {
-	Ctx   context.Context
-	Event *matchingv1.Event
+	Ctx       context.Context
+	Event     *matchingv1.Event
+	Partition int32
+	Offset    int64
+}
+
+// ErrNoActiveHold means a trade references an order that has no active hold:
+// retrying can never fix it, so it is a permanent settlement failure.
+var ErrNoActiveHold = errors.New("ledger: order has no active hold")
+
+// SettlementError is returned by ApplyEvents when an event cannot be settled
+// and retrying cannot help. It identifies the offending event; callers record
+// it with RecordFailure and stall the partition (the ledger never skips).
+type SettlementError struct {
+	Market    string
+	Seq       uint64
+	Partition int32
+	Offset    int64
+	Err       error
+}
+
+func (e *SettlementError) Error() string {
+	return fmt.Sprintf("cannot settle %s:%d (partition %d offset %d): %v", e.Market, e.Seq, e.Partition, e.Offset, e.Err)
+}
+func (e *SettlementError) Unwrap() error { return e.Err }
+
+// isPermanent classifies business-rule failures. Infrastructure errors
+// (database down, unknown market not loaded yet) stay transient.
+func isPermanent(err error) bool {
+	return errors.Is(err, ErrNoActiveHold) || errors.Is(err, ErrUnbalanced) || errors.Is(err, ErrInsufficientFunds) ||
+		errors.Is(err, money.ErrOverflow) || errors.Is(err, money.ErrInvalid) || errors.Is(err, money.ErrDivByZero)
+}
+
+// RecordFailure stores the failed event in settlement_failures (idempotent per
+// market+seq; repeated sightings bump attempts).
+func (s *Store) RecordFailure(ctx context.Context, e *SettlementError) error {
+	_, err := s.pool.Exec(ctx, `
+		INSERT INTO settlement_failures (market, seq, kafka_partition, kafka_offset, error) VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (market, seq) DO UPDATE SET attempts = settlement_failures.attempts + 1, last_seen = now(), error = EXCLUDED.error`,
+		e.Market, int64(e.Seq), e.Partition, e.Offset, e.Err.Error())
+	return err
 }
 
 const consumerName = "ledger-settle"
@@ -56,6 +96,9 @@ func (s *Store) ApplyEvents(ctx context.Context, markets MarketLookup, evs []Inc
 			err = ss.applyOne(ectx, markets, ev)
 			span.End()
 			if err != nil {
+				if isPermanent(err) {
+					return &SettlementError{Market: ev.Market, Seq: ev.Seq, Partition: in.Partition, Offset: in.Offset, Err: err}
+				}
 				return fmt.Errorf("event %s:%d: %w", ev.Market, ev.Seq, err)
 			}
 		}
@@ -171,7 +214,7 @@ func (ss *session) consumeHold(ctx context.Context, orderID uint64, asset string
 		return mapDBErr(err)
 	}
 	if tag.RowsAffected() != 1 {
-		return fmt.Errorf("ledger: order %d has no active %s hold", orderID, asset)
+		return fmt.Errorf("%w: order %d, asset %s", ErrNoActiveHold, orderID, asset)
 	}
 	return nil
 }

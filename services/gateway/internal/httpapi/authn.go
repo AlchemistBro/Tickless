@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -28,8 +29,9 @@ type Principal struct {
 	UserID int64
 	Role   string
 	// ViaKey is true when authenticated by a signed API key (no session).
-	ViaKey   bool
-	CanTrade bool
+	ViaKey        bool
+	CanTrade      bool
+	EmailVerified bool
 }
 
 type principalKey struct{}
@@ -85,7 +87,14 @@ func (s *Server) authenticate(next http.Handler) http.Handler {
 			s.denyAuth(w, r, err)
 			return
 		}
-		if s.isFrozen(r.Context(), p.UserID) {
+		frozen, err := s.isFrozen(r.Context(), p.UserID)
+		if err != nil {
+			// Fail CLOSED: if we cannot tell whether the account is frozen, we do not serve it.
+			slog.ErrorContext(r.Context(), "frozen-user check unavailable", "err", err)
+			writeErr(w, http.StatusServiceUnavailable, "unavailable", "authorization temporarily unavailable")
+			return
+		}
+		if frozen {
 			writeErr(w, http.StatusForbidden, "account_frozen", "account is frozen")
 			return
 		}
@@ -121,7 +130,7 @@ func (s *Server) fromToken(r *http.Request) (Principal, error) {
 			return Principal{}, errUnauthenticated
 		}
 	}
-	return Principal{UserID: c.UserID, Role: c.Role, CanTrade: true}, nil
+	return Principal{UserID: c.UserID, Role: c.Role, CanTrade: true, EmailVerified: c.EmailVerified}, nil
 }
 
 func (s *Server) fromAPIKey(r *http.Request) (Principal, error) {
@@ -143,7 +152,8 @@ func (s *Server) fromAPIKey(r *http.Request) (Principal, error) {
 	if err := auth.VerifyRequest(k.Secret, ts, r.Method, r.URL.RequestURI(), body, sig, s.d.Now(), signatureSkew); err != nil {
 		return Principal{}, errUnauthenticated
 	}
-	return Principal{UserID: k.UserId, Role: k.Role, ViaKey: true, CanTrade: k.CanTrade}, nil
+	// identity only returns keys of users with a verified email
+	return Principal{UserID: k.UserId, Role: k.Role, ViaKey: true, CanTrade: k.CanTrade, EmailVerified: true}, nil
 }
 
 func (s *Server) lookupKey(ctx context.Context, keyID string) (*identityv1.LookupAPIKeyResponse, error) {
@@ -164,12 +174,52 @@ func (s *Server) lookupKey(ctx context.Context, keyID string) (*identityv1.Looku
 	return resp, nil
 }
 
-// isFrozen consults the Redis set maintained from users.events. It fails open
-// on Redis errors: frozen users cannot log in or refresh anyway, so the window
-// is at most one access-token lifetime.
-func (s *Server) isFrozen(ctx context.Context, uid int64) bool {
-	ok, err := s.d.Redis.SIsMember(ctx, FrozenSet, itoa64(uid)).Result()
-	return err == nil && ok
+// isFrozen consults the Redis set of frozen users (rebuilt from identity at
+// start and kept current from users.events). It FAILS CLOSED: a Redis error, or
+// a set that has not been rebuilt yet, is an error and the caller answers 503.
+func (s *Server) isFrozen(ctx context.Context, uid int64) (bool, error) {
+	if s.d.RequireFrozenSync && !s.frozenSynced.Load() {
+		return false, errors.New("frozen-user set not yet synchronised from identity")
+	}
+	return s.d.Redis.SIsMember(ctx, FrozenSet, itoa64(uid)).Result()
+}
+
+// SyncFrozen rebuilds the frozen-user set from identity (the source of truth),
+// replacing whatever Redis holds, so a Redis restart or a missed event can
+// never leave a frozen user unblocked. It marks the server ready to serve
+// authenticated requests when Deps.RequireFrozenSync is set.
+func (s *Server) SyncFrozen(ctx context.Context) error {
+	resp, err := s.d.Identity.ListFrozen(ctx, &identityv1.ListFrozenRequest{})
+	if err != nil {
+		return err
+	}
+	pipe := s.d.Redis.TxPipeline()
+	pipe.Del(ctx, FrozenSet)
+	if len(resp.UserIds) > 0 {
+		members := make([]any, len(resp.UserIds))
+		for i, id := range resp.UserIds {
+			members[i] = itoa64(id)
+		}
+		pipe.SAdd(ctx, FrozenSet, members...)
+	}
+	if _, err := pipe.Exec(ctx); err != nil {
+		return err
+	}
+	s.frozenSynced.Store(true)
+	return nil
+}
+
+// FrozenSynced reports whether SyncFrozen has completed.
+func (s *Server) FrozenSynced() bool { return s.frozenSynced.Load() }
+
+func (s *Server) requireVerified(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if p, _ := principalFrom(r.Context()); !p.EmailVerified {
+			writeErr(w, http.StatusForbidden, "email_not_verified", "verify your email address before trading")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // FrozenSet is the Redis set of frozen user ids.

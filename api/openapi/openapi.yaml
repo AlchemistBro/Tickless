@@ -175,6 +175,12 @@ paths:
         Limit and market orders. Market buys need `price` as a protective bound (the
         maximum price you accept); funds are reserved for `quantity * price`.
         Returns 200 with the original order when `client_order_id` was already used.
+
+        **API-key requests must include `client_order_id`** (422 `client_order_id_required`
+        otherwise): a signed request can be replayed inside its 30 s validity window, and the
+        client order id makes the replay idempotent instead of creating a second order.
+
+        Placing orders requires a verified email address (403 `email_not_verified`).
       requestBody:
         required: true
         content:
@@ -462,7 +468,7 @@ components:
         post_only: {type: boolean}
         price: {type: string, example: "50000.25"}
         quantity: {type: string, example: "0.5"}
-        client_order_id: {type: string, maxLength: 64}
+        client_order_id: {type: string, maxLength: 64, description: Required when authenticating with an API key. Unique per user; resubmitting returns the original order.}
     Order:
       type: object
       required: [id, market, side, type, time_in_force, post_only, quantity, filled_quantity, status, created_at, updated_at]

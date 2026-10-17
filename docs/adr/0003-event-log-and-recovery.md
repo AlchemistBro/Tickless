@@ -12,6 +12,14 @@ The engine keeps the order book in memory only. After a crash it must resume wit
 - `StateHash()` (SHA-256 of the canonical state, independent of the snapshot offset) is the "book hash" used by tests and, in later phases, by the chaos test and the reconciler.
 - Proof: `TestSnapshotReplayEqualsUninterruptedRun` snapshots at ~60 cut points of a 2,500-command random stream, restores, replays the remainder and requires identical events and an identical final hash; `FuzzEngineAgainstModel` repeats this at the midpoint of fuzzed streams.
 
+## Recovery must fail loudly (Phase 3.1)
+Replay is only correct if the log still contains every command since the checkpoint. The service therefore **refuses to start** (`ErrRefuseToStart`) instead of silently diverging:
+- **Log truncated:** for each partition the resume offset (checkpoint offset, or 0 without a checkpoint) is compared with the log start offset; `resume < log start` means commands were deleted, the book cannot be rebuilt, and an empty book would also restart `seq` at 1, which consumers would dedupe away on `(market, seq)`. Empty snapshot directory with log start 0 is a normal fresh start.
+- **Unrestorable checkpoints:** if a partition directory contains checkpoint files but none restores, starting empty is refused. A torn *newest* file falls back to the previous valid one.
+- **Partition count changed:** markets map to partitions by key hash, so every checkpoint records the partition count of `matching.commands`; a different count is refused.
+- **Retention:** `matching.commands` and `matching.events` are created with `retention.ms=-1` (`deploy/compose/kafka-topics.sh`); the command log is the source of truth and must not expire.
+Each refusal has a test (`app/recovery_test.go`, `TestRefusesToStart*`).
+
 ## Alternatives considered
 - **Rebuilding the book from `matching.events`:** requires reconstructing order state from deltas; the command log is smaller and replay reuses the real code path.
 - **Persisting the book in PostgreSQL on the hot path:** violates "no DB on the hot path" and caps throughput.

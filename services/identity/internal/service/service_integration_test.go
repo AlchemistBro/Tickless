@@ -165,7 +165,10 @@ func TestFreezeBlocksLoginRefreshAndKeys(t *testing.T) {
 	k, _, _ := e.svc.CreateAPIKey(ctx, uid, "", false)
 
 	require.NoError(t, e.svc.SetFrozen(ctx, uid, true))
-	_, err := e.svc.Login(ctx, "frank@example.com", "correct horse battery")
+	frozen, err := e.svc.ListFrozen(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, []int64{uid}, frozen, "the gateway rebuilds its frozen set from this list")
+	_, err = e.svc.Login(ctx, "frank@example.com", "correct horse battery")
 	assert.ErrorIs(t, err, service.ErrFrozen)
 	_, err = e.svc.Refresh(ctx, tk.Refresh)
 	assert.ErrorIs(t, err, service.ErrInvalidToken, "sessions revoked on freeze")
@@ -173,6 +176,9 @@ func TestFreezeBlocksLoginRefreshAndKeys(t *testing.T) {
 	assert.ErrorIs(t, err, service.ErrFrozen)
 
 	require.NoError(t, e.svc.SetFrozen(ctx, uid, false))
+	frozen, err = e.svc.ListFrozen(ctx)
+	require.NoError(t, err)
+	assert.Empty(t, frozen)
 	_, err = e.svc.Login(ctx, "frank@example.com", "correct horse battery")
 	assert.NoError(t, err)
 	assert.ErrorIs(t, e.svc.SetFrozen(ctx, 99999, true), service.ErrNotFound)

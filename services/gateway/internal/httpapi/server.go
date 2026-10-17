@@ -58,18 +58,22 @@ type Deps struct {
 	AllowedOrigins []string
 	// TrustProxy makes the client IP come from X-Forwarded-For (set only behind a trusted proxy).
 	TrustProxy bool
-	Now        func() time.Time
+	// RequireFrozenSync makes authenticated requests fail with 503 until
+	// SyncFrozen has completed once (production wiring sets it).
+	RequireFrozenSync bool
+	Now               func() time.Time
 }
 
 // Server is the HTTP API.
 type Server struct {
-	d        Deps
-	limiter  *ratelimit.Limiter
-	idem     *idem.Store
-	verif    atomic.Pointer[auth.Verifier]
-	keyMu    sync.Mutex
-	lastKey  time.Time
-	keyCache sync.Map // key id -> cachedKey
+	d            Deps
+	limiter      *ratelimit.Limiter
+	idem         *idem.Store
+	verif        atomic.Pointer[auth.Verifier]
+	frozenSynced atomic.Bool
+	keyMu        sync.Mutex
+	lastKey      time.Time
+	keyCache     sync.Map // key id -> cachedKey
 
 	reqs     metric.Int64Counter
 	dur      metric.Float64Histogram
@@ -188,6 +192,10 @@ func (s *Server) Routes() http.Handler {
 	r.Use(s.recoverer, s.securityHeaders, s.cors, s.observe)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok")) })
 	r.Get("/readyz", func(w http.ResponseWriter, req *http.Request) {
+		if s.d.RequireFrozenSync && !s.frozenSynced.Load() {
+			writeErr(w, http.StatusServiceUnavailable, "unavailable", "frozen-user set not yet rebuilt from identity")
+			return
+		}
 		if err := s.d.Redis.Ping(req.Context()).Err(); err != nil {
 			writeErr(w, http.StatusServiceUnavailable, "unavailable", "redis unreachable")
 			return
@@ -218,7 +226,7 @@ func (s *Server) Routes() http.Handler {
 			r.Get("/orders/{id}", s.getOrder)
 			r.Group(func(r chi.Router) {
 				r.Use(s.requireTrade, s.orderRateLimit)
-				r.Post("/orders", s.placeOrder)
+				r.With(s.requireVerified).Post("/orders", s.placeOrder)
 				r.Delete("/orders/{id}", s.cancelOrder)
 				r.Delete("/orders", s.cancelAll)
 			})

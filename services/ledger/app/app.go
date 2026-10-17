@@ -115,9 +115,18 @@ func handleEvents(ctx context.Context, st *store.Store, markets store.MarketLook
 			slog.Error("dropping undecodable matching event", "partition", r.Partition, "offset", r.Offset, "err", err)
 			continue
 		}
-		in = append(in, store.Incoming{Ctx: kafka.ExtractContext(ctx, r), Event: &ev})
+		in = append(in, store.Incoming{Ctx: kafka.ExtractContext(ctx, r), Event: &ev, Partition: r.Partition, Offset: r.Offset})
 	}
-	return st.ApplyEvents(ctx, markets, in)
+	err := st.ApplyEvents(ctx, markets, in)
+	var se *store.SettlementError
+	if errors.As(err, &se) {
+		// Never skip a settlement: record it for operators and stall this partition.
+		if rerr := st.RecordFailure(ctx, se); rerr != nil {
+			return rerr // could not even record it: retry as transient
+		}
+		return kafka.Permanent(err)
+	}
+	return err
 }
 
 type server struct {

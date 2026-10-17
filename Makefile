@@ -6,7 +6,7 @@ MODULES := $(shell sed -n 's|^\s*\./\(.*\)$$|\1|p; s|^use \./\(.*\)$$|\1|p' go.w
 HAS_CC := $(shell command -v gcc >/dev/null 2>&1 && echo 1)
 GO_IMAGE := golang:1.27
 
-.PHONY: help test test-integration lint proto up down logs ps fuzz bench e2e chaos-dup
+.PHONY: help test test-integration lint lint-alerts proto up down logs ps fuzz bench e2e chaos-dup
 
 help:
 	@grep -E '^[a-z-]+:' Makefile | cut -d: -f1 | tr '\n' ' '; echo
@@ -26,7 +26,11 @@ test-integration:
 	@for m in $(MODULES); do echo "== integration $$m"; (cd $$m && go test -tags integration -cover -count=1 -timeout 15m ./...) || exit 1; done
 
 lint:
-	@rc=0; for m in $(MODULES); do echo "== golangci-lint $$m"; (cd $$m && golangci-lint run ./...) || rc=1; done; 	 buf lint || rc=1; exit $$rc
+	@rc=0; for m in $(MODULES); do echo "== golangci-lint $$m"; (cd $$m && golangci-lint run ./...) || rc=1; done; 	 buf lint || rc=1; "$(MAKE)" --no-print-directory lint-alerts || rc=1; exit $$rc
+
+# Validate Prometheus alert rules with promtool (runs in a container).
+lint-alerts:
+	@MSYS_NO_PATHCONV=1 docker run --rm --entrypoint promtool -v "$(CURDIR)/deploy/observability/prometheus:/p:ro" prom/prometheus:v3.1.0 check rules /p/rules/kafka.yml /p/rules/infra.yml
 
 proto:
 	buf generate
@@ -46,7 +50,7 @@ else
 endif
 
 up:
-	$(COMPOSE) up -d --wait --remove-orphans
+	$(COMPOSE) up -d --build --wait --remove-orphans
 	bash scripts/wait-up.sh
 	@echo; echo "Grafana http://localhost:3000 (admin/admin)  Jaeger http://localhost:16686"
 	@echo "Prometheus http://localhost:9090  Mailpit http://localhost:8025  RabbitMQ http://localhost:15672 (tickless/tickless)"

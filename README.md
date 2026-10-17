@@ -70,6 +70,11 @@ The public API is specified in [api/openapi/openapi.yaml](api/openapi/openapi.ya
 Details, profiles and the known worst case (100k levels, ~30 µs): [docs/perf/engine](docs/perf/engine/README.md).
 
 ## Known limitations (so far)
+- A poison event stalls ONE partition of its consumer group (alert `ConsumerPartitionStalled`, runbook in `docs/runbooks/`); the ledger records it in `settlement_failures` and never skips it. Operators resolve it explicitly.
+- Matching refuses to start (instead of guessing) if its command log was truncated, its checkpoints cannot be restored or the partition count changed. In local development after such a change, reset the stack with `make down` (removes volumes).
+- A transient handler error (e.g. database down) retries with backoff and blocks the other partitions of that consumer while it lasts.
+- A duplicate `PlaceOrder` delayed by more than 262,144 commands is not detected by the engine; it cannot double-settle but stalls the ledger partition (ADR 0004).
+- The frozen-user set and API-key lookups are cached (Redis / 30 s in the gateway): revoking an API key can take up to 30 s on other gateway instances.
 - Market data (order book / candles / WebSocket), deposits, withdrawals, notifications, reconciliation, Kubernetes and the web UI are later phases (see [PROGRESS.md](PROGRESS.md)).
 - Email verification is bypassed in the local stack (`IDENTITY_AUTO_VERIFY=true`) until the notifier exists; the verification token is already published on `users.events`.
 - Postings/orders are not yet partitioned by month (Phase 9, with EXPLAIN evidence).

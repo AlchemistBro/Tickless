@@ -94,7 +94,7 @@ func Run(ctx context.Context, cfg Config) error {
 
 	api := httpapi.New(httpapi.Deps{
 		Identity: identity, Ledger: ledgerv1.NewLedgerServiceClient(ledgerConn), Orders: ordersv1.NewOrdersServiceClient(ordersConn),
-		Redis: rdb, Limits: cfg.Limits, AllowedOrigins: cfg.AllowedOrigins, TrustProxy: cfg.TrustProxy,
+		Redis: rdb, Limits: cfg.Limits, AllowedOrigins: cfg.AllowedOrigins, TrustProxy: cfg.TrustProxy, RequireFrozenSync: true,
 		PublicKey: func(ctx context.Context) (ed25519.PublicKey, error) {
 			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 			defer cancel()
@@ -111,7 +111,12 @@ func Run(ctx context.Context, cfg Config) error {
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 2 * time.Minute,
 		MaxHeaderBytes: 16 << 10,
 	}
-	svc.ServeAdmin(ctx, cfg.AdminAddr, func(ctx context.Context) error { return rdb.Ping(ctx).Err() })
+	svc.ServeAdmin(ctx, cfg.AdminAddr, func(ctx context.Context) error {
+		if !api.FrozenSynced() {
+			return errors.New("frozen-user set not yet rebuilt from identity")
+		}
+		return rdb.Ping(ctx).Err()
+	})
 
 	g, gctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
@@ -126,6 +131,24 @@ func Run(ctx context.Context, cfg Config) error {
 		sctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		return srv.Shutdown(sctx)
+	})
+	g.Go(func() error {
+		// Rebuild the frozen-user set from identity (retry until identity is reachable).
+		for gctx.Err() == nil {
+			sctx, cancel := context.WithTimeout(gctx, 5*time.Second)
+			err := api.SyncFrozen(sctx)
+			cancel()
+			if err == nil {
+				slog.Info("frozen-user set rebuilt from identity")
+				return nil
+			}
+			slog.Warn("cannot rebuild frozen-user set yet", "err", err)
+			select {
+			case <-time.After(time.Second):
+			case <-gctx.Done():
+			}
+		}
+		return nil
 	})
 	g.Go(func() error {
 		// Unique group per instance so that every gateway sees every freeze event.

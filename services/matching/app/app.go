@@ -90,17 +90,10 @@ func Run(ctx context.Context, cfg Config) error {
 	}
 	defer producer.Close()
 
-	// Restore every partition from its newest valid checkpoint.
-	workers := make(map[int32]*worker, len(parts))
-	offsets := map[int32]kgo.Offset{}
-	for _, pid := range parts {
-		w, next, err := newWorker(pid, cfg, producer)
-		if err != nil {
-			return err
-		}
-		workers[pid] = w
-		offsets[pid] = kgo.NewOffset().At(next)
-		slog.Info("partition ready", "partition", pid, "resume_offset", next, "markets", w.p.Markets())
+	// Restore every partition from its newest valid checkpoint, or refuse to start.
+	workers, offsets, err := prepare(ctx, brokers, cfg, parts, producer)
+	if err != nil {
+		return err
 	}
 	registerGauges(workers)
 
@@ -198,6 +191,7 @@ type worker struct {
 	next     int64 // offset of the next command to apply
 	lastCkpt int64
 	prod     *kafka.Producer
+	nparts   int // partition count of matching.commands, stored in every checkpoint
 	in       chan []*kgo.Record
 	open     atomic.Int64 // resting orders across the partition's markets (for the gauge)
 	cmds     metric.Int64Counter
@@ -206,16 +200,16 @@ type worker struct {
 	ckptDur  metric.Float64Histogram
 }
 
-func newWorker(id int32, cfg Config, prod *kafka.Producer) (*worker, int64, error) {
+func newWorker(id int32, cfg Config, prod *kafka.Producer, topicPartitions int) (*worker, int64, error) {
 	dir := filepath.Join(cfg.SnapshotDir, fmt.Sprintf("p%d", id))
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, 0, err
 	}
-	p, next, err := loadCheckpoint(dir)
+	p, next, err := loadCheckpoint(dir, topicPartitions)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("partition %d: %w", id, err)
 	}
-	w := &worker{id: id, cfg: cfg, dir: dir, p: p, next: next, lastCkpt: next, prod: prod, in: make(chan []*kgo.Record, 8)}
+	w := &worker{id: id, cfg: cfg, dir: dir, p: p, next: next, lastCkpt: next, prod: prod, nparts: topicPartitions, in: make(chan []*kgo.Record, 8)}
 	w.cmds, _ = meter.Int64Counter("matching_commands_total", metric.WithDescription("Commands applied by the engine"))
 	w.evs, _ = meter.Int64Counter("matching_events_total", metric.WithDescription("Events emitted by the engine"))
 	w.latency, _ = meter.Float64Histogram("matching_command_latency_seconds",
@@ -328,8 +322,8 @@ func (w *worker) publish(ctx context.Context, recs []kafka.Record) error {
 
 func (w *worker) checkpoint(ctx context.Context) error {
 	start := time.Now()
-	data := w.p.Checkpoint(w.next)
-	name := filepath.Join(w.dir, fmt.Sprintf("%020d.ckpt", w.next))
+	data := w.p.Checkpoint(w.next, w.nparts)
+	name := filepath.Join(w.dir, ckptName(w.next))
 	tmp := name + ".tmp"
 	if err := writeFileSync(tmp, data); err != nil {
 		return err
@@ -359,28 +353,94 @@ func writeFileSync(path string, data []byte) error {
 	return f.Close()
 }
 
-// loadCheckpoint restores the newest valid checkpoint in dir, falling back to
-// older ones (a crash can leave a torn newest file) and finally to an empty
-// partition replaying the whole log.
-func loadCheckpoint(dir string) (*partition.Partition, int64, error) {
+// ErrRefuseToStart wraps every recovery failure that must stop the service
+// instead of letting it diverge from the true book (ADR 0003).
+var ErrRefuseToStart = errors.New("matching refuses to start")
+
+// loadCheckpoint restores the newest valid checkpoint in dir. A torn newest
+// file falls back to an older valid one. It REFUSES (rather than starting from
+// an empty book) when checkpoint files exist but none restores, or when the
+// topic partition count differs from the one recorded in the checkpoint. An
+// empty directory is a fresh start; verifyLogStart then makes sure the log
+// really begins at offset 0.
+func loadCheckpoint(dir string, topicPartitions int) (*partition.Partition, int64, error) {
 	files, err := filepath.Glob(filepath.Join(dir, "*.ckpt"))
 	if err != nil {
 		return nil, 0, err
 	}
+	if len(files) == 0 {
+		return partition.New(), 0, nil
+	}
 	sort.Sort(sort.Reverse(sort.StringSlice(files)))
+	var lastErr error
 	for _, f := range files {
 		data, err := os.ReadFile(f) //nolint:gosec // f comes from globbing the operator-configured snapshot directory
 		if err != nil {
+			lastErr = err
 			continue
 		}
-		p, off, err := partition.Restore(data)
+		p, off, parts, err := partition.Restore(data)
 		if err != nil {
 			slog.Warn("ignoring corrupt checkpoint", "file", f, "err", err)
+			lastErr = err
 			continue
+		}
+		if parts != topicPartitions {
+			return nil, 0, fmt.Errorf("%w: %s was written for %d partitions of %s but the topic now has %d; markets would map to different partitions",
+				ErrRefuseToStart, filepath.Base(f), parts, TopicCommands, topicPartitions)
 		}
 		return p, off, nil
 	}
-	return partition.New(), 0, nil
+	return nil, 0, fmt.Errorf("%w: %d checkpoint files in %s but none can be restored (last error: %w); starting from an empty book would diverge from the log",
+		ErrRefuseToStart, len(files), dir, lastErr)
+}
+
+// prepare restores all partitions and verifies the command log still covers
+// every resume offset.
+func prepare(ctx context.Context, brokers []string, cfg Config, parts []int32, prod *kafka.Producer) (map[int32]*worker, map[int32]kgo.Offset, error) {
+	workers := make(map[int32]*worker, len(parts))
+	offsets := map[int32]kgo.Offset{}
+	for _, pid := range parts {
+		w, next, err := newWorker(pid, cfg, prod, len(parts))
+		if err != nil {
+			return nil, nil, err
+		}
+		workers[pid] = w
+		offsets[pid] = kgo.NewOffset().At(next)
+		slog.Info("partition ready", "partition", pid, "resume_offset", next, "markets", w.p.Markets())
+	}
+	if err := verifyLogStart(ctx, brokers, workers); err != nil {
+		return nil, nil, err
+	}
+	return workers, offsets, nil
+}
+
+// verifyLogStart refuses to start when a partition would resume before the
+// first offset still present in the log: those commands were deleted, so the
+// book cannot be rebuilt and the engine would restart from a book that does not
+// match history (and from seq 1, which consumers would silently dedupe away).
+func verifyLogStart(ctx context.Context, brokers []string, workers map[int32]*worker) error {
+	cl, err := kgo.NewClient(kgo.SeedBrokers(brokers...))
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+	adm := kadm.NewClient(cl)
+	starts, err := adm.ListStartOffsets(ctx, TopicCommands)
+	if err != nil {
+		return fmt.Errorf("cannot read log start offsets: %w", err)
+	}
+	for pid, w := range workers {
+		lo, ok := starts.Lookup(TopicCommands, pid)
+		if !ok || lo.Err != nil {
+			return fmt.Errorf("cannot read log start offset of %s[%d]: %w", TopicCommands, pid, lo.Err)
+		}
+		if w.next < lo.Offset {
+			return fmt.Errorf("%w: partition %d would resume at offset %d but the log now starts at %d; the commands in between were deleted (retention or a lost checkpoint), so the book cannot be rebuilt. Restore the snapshot directory or recreate the topic and its snapshots together",
+				ErrRefuseToStart, pid, w.next, lo.Offset)
+		}
+	}
+	return nil
 }
 
 func pruneCheckpoints(dir string, keep int) {
@@ -390,3 +450,6 @@ func pruneCheckpoints(dir string, keep int) {
 		_ = os.Remove(files[i])
 	}
 }
+
+// ckptName is the file name of the checkpoint at a log offset (sorts by offset).
+func ckptName(offset int64) string { return fmt.Sprintf("%020d.ckpt", offset) }

@@ -276,6 +276,14 @@ func (s *Server) placeOrder(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
+	if p.ViaKey && in.ClientOrderID == "" {
+		// A signed request can be replayed within its validity window. Without a
+		// client_order_id the replay would create a second order; with one the
+		// order service answers it idempotently.
+		writeErr(w, http.StatusUnprocessableEntity, "client_order_id_required",
+			"client_order_id is required when authenticating with an API key (it makes replays idempotent)")
+		return
+	}
 	var side commonv1.Side
 	switch strings.ToLower(in.Side) {
 	case "buy":
