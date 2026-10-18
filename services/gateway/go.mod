@@ -6,6 +6,7 @@ replace github.com/tickless/pkg => ../../pkg
 
 require (
 	github.com/alicebob/miniredis/v2 v2.40.0
+	github.com/coder/websocket v1.8.15
 	github.com/getkin/kin-openapi v0.151.0
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/redis/go-redis/v9 v9.23.0
@@ -36,6 +37,7 @@ require (
 	github.com/oasdiff/yaml3 v0.0.14 // indirect
 	github.com/pierrec/lz4/v4 v4.1.33 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 // indirect
+	github.com/twmb/franz-go/pkg/kadm v1.19.0 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.15.0 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
