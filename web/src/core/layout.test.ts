@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addWidget, COLS, defaultLayout, reconcile, removeWidget } from "./layout";
+import { addWidget, COLS, defaultLayout, reconcile, removeWidget, sameLayout } from "./layout";
 import { defineWidget } from "./widget";
 
 const w = (id: string, layout: { w: number; h: number; x?: number; y?: number } = { w: 6, h: 4, x: 0, y: 0 }) =>
@@ -44,5 +44,27 @@ describe("layout", () => {
     l = addWidget(l, C);
     expect(l.map((x) => x.i)).toEqual(["alpha", "gamma"]);
     expect(removeWidget(l, "alpha").map((x) => x.i)).toEqual(["gamma"]);
+  });
+
+  it("re-adds a widget below everything else, whatever position it declares", () => {
+    const placed = [{ i: "alpha", x: 3, y: 0, w: 6, h: 10 }];
+    const l = addWidget(placed, B); // B declares x:3 y:4, which would overlap alpha
+    expect(l[1]).toEqual({ i: "beta", x: 0, y: 10, w: COLS, h: 4 });
+  });
+
+  it("toggling a widget many times does not move the others", () => {
+    const base = [
+      { i: "alpha", x: 0, y: 0, w: 6, h: 4 },
+      { i: "gamma", x: 6, y: 0, w: 6, h: 4 },
+    ];
+    let l = base;
+    for (let n = 0; n < 20; n++) l = removeWidget(addWidget(l, B), "beta");
+    expect(l).toEqual(base);
+  });
+
+  it("compares layouts regardless of order", () => {
+    const a = [{ i: "a", x: 0, y: 0, w: 1, h: 1 }, { i: "b", x: 1, y: 0, w: 1, h: 1 }];
+    expect(sameLayout(a, [a[1], a[0]])).toBe(true);
+    expect(sameLayout(a, [a[0], { ...a[1], y: 1 }])).toBe(false);
   });
 });

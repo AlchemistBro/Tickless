@@ -2,7 +2,7 @@ import { Component, ReactNode, useMemo, useState } from "react";
 import GridLayout, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-import { addWidget, COLS, Item, reconcile, removeWidget } from "./layout";
+import { addWidget, COLS, Item, reconcile, removeWidget, sameLayout } from "./layout";
 import { loaded } from "./registry";
 import { persistedStore, useStore } from "./store";
 
@@ -76,7 +76,13 @@ export function Dashboard({ market }: { market: string }) {
         rowHeight={24}
         margin={[8, 8]}
         draggableHandle=".widget-head"
-        onLayoutChange={(l) => commit(l.map(({ i, x, y, w, h }) => ({ i, x, y, w, h })))}
+        compactType="vertical"
+        onLayoutChange={(l) => {
+          // Fires on every re-render with the compacted result; only persist real changes
+          // (otherwise commit -> new layout -> change event feeds back on itself).
+          const next = l.map(({ i, x, y, w, h }) => ({ i, x, y, w, h }));
+          if (!sameLayout(next, layout)) commit(next);
+        }}
       >
         {layout.map((l) => {
           const w = byId.get(l.i)!;

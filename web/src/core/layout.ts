@@ -41,9 +41,23 @@ export function reconcile(saved: unknown, widgets: WidgetDef[], knownIds: string
   return [...out, ...defaultLayout(widgets.filter((w) => !present.has(w.id) && !known.has(w.id)))];
 }
 
+/**
+ * Shows a widget again at the left edge below everything else. Using the
+ * widget's declared position here made it collide with whatever the user had
+ * moved there meanwhile, pushing other panels around on every toggle.
+ */
 export function addWidget(layout: Item[], w: WidgetDef): Item[] {
   if (layout.some((l) => l.i === w.id)) return layout;
-  return [...layout, ...defaultLayout([w]).map((d) => ({ ...d, x: 0 }))];
+  const bottom = layout.reduce((m, l) => Math.max(m, l.y + l.h), 0);
+  const d = defaultLayout([w])[0];
+  return [...layout, { ...d, x: 0, y: bottom }];
 }
+
+export const sameLayout = (a: Item[], b: Item[]): boolean =>
+  a.length === b.length &&
+  a.every((p) => {
+    const q = b.find((o) => o.i === p.i);
+    return !!q && q.x === p.x && q.y === p.y && q.w === p.w && q.h === p.h;
+  });
 
 export const removeWidget = (layout: Item[], id: string): Item[] => layout.filter((l) => l.i !== id);
