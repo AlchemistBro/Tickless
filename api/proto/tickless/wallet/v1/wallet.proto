@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package tickless.wallet.v1;
+
+service WalletService {
+  // GetDepositAddress returns the user's deposit address on a chain, deriving
+  // and registering it with chainwatcher on first use. Idempotent: the same
+  // (user, chain) always yields the same address. The address is derived from
+  // an extended PUBLIC key; this service never holds a private key.
+  // INVALID_ARGUMENT for an unknown chain.
+  rpc GetDepositAddress(GetDepositAddressRequest) returns (GetDepositAddressResponse);
+}
+
+message GetDepositAddressRequest {
+  int64 user_id = 1;
+  // "btc" or "eth". The eth address also receives ERC-20 USDT.
+  string chain = 2;
+}
+
+message GetDepositAddressResponse {
+  string chain = 1;
+  string address = 2;
+  // Non-hardened child index under the chain's account xpub.
+  uint32 derivation_index = 3;
+}

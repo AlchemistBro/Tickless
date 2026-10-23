@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package tickless.chainwatcher.v1;
+
+import "tickless/common/v1/common.proto";
+
+service ChainwatcherService {
+  // RegisterAddress adds a deposit address to the watch list. Idempotent for the
+  // same (chain, address, user); FAILED_PRECONDITION if the address belongs to
+  // another user.
+  rpc RegisterAddress(RegisterAddressRequest) returns (RegisterAddressResponse);
+  // ListDeposits returns a user's deposits, newest first, with confirmation counts.
+  rpc ListDeposits(ListDepositsRequest) returns (ListDepositsResponse);
+}
+
+message RegisterAddressRequest {
+  string chain = 1;
+  string address = 2;
+  int64 user_id = 3;
+  uint32 derivation_index = 4;
+}
+
+message RegisterAddressResponse {}
+
+message ListDepositsRequest {
+  int64 user_id = 1;
+  // Return deposits with id < before_id (0 = newest).
+  int64 before_id = 2;
+  int32 limit = 3;
+}
+
+enum DepositStatus {
+  DEPOSIT_STATUS_UNSPECIFIED = 0;
+  // Seen in a block, fewer confirmations than required. Not credited.
+  DEPOSIT_STATUS_PENDING = 1;
+  // Threshold reached; credited (or being credited) by the ledger.
+  DEPOSIT_STATUS_CONFIRMED = 2;
+  // The block containing it left the best chain before the threshold. Never credited.
+  DEPOSIT_STATUS_REORGED = 3;
+}
+
+message Deposit {
+  int64 id = 1;
+  string chain = 2;
+  string txid = 3;
+  // Output index (BTC vout) or log index (ERC-20); 0 for a native ETH transfer.
+  int64 index = 4;
+  string asset = 5;
+  tickless.common.v1.Amount amount = 6;
+  string address = 7;
+  DepositStatus status = 8;
+  int64 block_height = 9;
+  int64 confirmations = 10;
+  int64 required_confirmations = 11;
+  int64 detected_at_unix_nano = 12;
+  int64 confirmed_at_unix_nano = 13;
+}
+
+message ListDepositsResponse {
+  repeated Deposit deposits = 1;
+}
+
+enum DepositEventType {
+  DEPOSIT_EVENT_TYPE_UNSPECIFIED = 0;
+  DEPOSIT_EVENT_TYPE_DETECTED = 1;
+  DEPOSIT_EVENT_TYPE_CONFIRMED = 2;
+  DEPOSIT_EVENT_TYPE_REORGED = 3;
+}
+
+// DepositEvent is published to deposits.events (key: user id). The ledger
+// credits on CONFIRMED only, with business key "deposit:{chain}:{txid}:{index}",
+// so a re-delivered event never credits twice (SPEC §6 invariant 4).
+message DepositEvent {
+  tickless.common.v1.EventMeta meta = 1;
+  DepositEventType type = 2;
+  int64 user_id = 3;
+  string chain = 4;
+  string txid = 5;
+  int64 index = 6;
+  string asset = 7;
+  tickless.common.v1.Amount amount = 8;
+  string address = 9;
+  int64 block_height = 10;
+  string block_hash = 11;
+  int64 confirmations = 12;
+}
