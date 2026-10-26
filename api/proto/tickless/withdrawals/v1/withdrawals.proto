@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package tickless.withdrawals.v1;
+
+import "tickless/common/v1/common.proto";
+
+// WithdrawalEvent is published to withdrawals.events (key: user id) on every
+// state transition. Consumers dedupe on meta.event_id.
+message WithdrawalEvent {
+  tickless.common.v1.EventMeta meta = 1;
+  int64 withdrawal_id = 2;
+  int64 user_id = 3;
+  string chain = 4;
+  string asset = 5;
+  tickless.common.v1.Amount amount = 6;
+  string destination = 7;
+  string from_state = 8;
+  string to_state = 9;
+  string reason = 10;
+}
