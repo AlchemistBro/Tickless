@@ -46,6 +46,10 @@ type Withdrawal struct {
 	TxID        string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+	// Execution details (set while signing/broadcasting/confirming).
+	Confirmations int64
+	NetworkFee    string
+	FeeAsset      string
 }
 
 // Store is the withdrawals database.
@@ -151,7 +155,7 @@ func (s *Store) Transition(ctx context.Context, id int64, from, to rules.State, 
 
 // Get returns one withdrawal.
 func (s *Store) Get(ctx context.Context, id int64) (Withdrawal, error) {
-	w, err := scan(s.pool.QueryRow(ctx, `SELECT id, user_id, chain, asset, amount::text, destination, status, reason, COALESCE(txid, ''), created_at, updated_at FROM withdrawals WHERE id = $1`, id))
+	w, err := scan(s.pool.QueryRow(ctx, `SELECT id, user_id, chain, asset, amount::text, destination, status, reason, COALESCE(txid, ''), created_at, updated_at, confirmations, network_fee, fee_asset FROM withdrawals WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Withdrawal{}, ErrNotFound
 	}
@@ -160,7 +164,7 @@ func (s *Store) Get(ctx context.Context, id int64) (Withdrawal, error) {
 
 // ListForUser returns a user's withdrawals, newest first.
 func (s *Store) ListForUser(ctx context.Context, userID int64) ([]Withdrawal, error) {
-	rows, err := s.pool.Query(ctx, `SELECT id, user_id, chain, asset, amount::text, destination, status, reason, COALESCE(txid, ''), created_at, updated_at FROM withdrawals WHERE user_id = $1 ORDER BY id DESC`, userID)
+	rows, err := s.pool.Query(ctx, `SELECT id, user_id, chain, asset, amount::text, destination, status, reason, COALESCE(txid, ''), created_at, updated_at, confirmations, network_fee, fee_asset FROM withdrawals WHERE user_id = $1 ORDER BY id DESC`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +187,8 @@ type rowScanner interface {
 func scan(r rowScanner) (Withdrawal, error) {
 	var w Withdrawal
 	var amt, st string
-	if err := r.Scan(&w.ID, &w.UserID, &w.Chain, &w.Asset, &amt, &w.Destination, &st, &w.Reason, &w.TxID, &w.CreatedAt, &w.UpdatedAt); err != nil {
+	if err := r.Scan(&w.ID, &w.UserID, &w.Chain, &w.Asset, &amt, &w.Destination, &st, &w.Reason, &w.TxID, &w.CreatedAt, &w.UpdatedAt,
+		&w.Confirmations, &w.NetworkFee, &w.FeeAsset); err != nil {
 		return Withdrawal{}, err
 	}
 	v, err := money.ParseInt128(amt)
@@ -205,4 +210,90 @@ func enqueue(ctx context.Context, tx pgx.Tx, w Withdrawal, from rules.State, rea
 		return err
 	}
 	return outbox.Enqueue(ctx, tx, TopicEvents, fmt.Sprint(w.UserID), msg)
+}
+
+// ListByState returns withdrawals in state whose last change is at or before
+// changedBefore, oldest first (work queues of the background workers).
+func (s *Store) ListByState(ctx context.Context, state rules.State, changedBefore time.Time, limit int) ([]Withdrawal, error) {
+	rows, err := s.pool.Query(ctx, `SELECT id, user_id, chain, asset, amount::text, destination, status, reason, COALESCE(txid, ''), created_at, updated_at, confirmations, network_fee, fee_asset
+		FROM withdrawals WHERE status = $1 AND updated_at <= $2 ORDER BY id LIMIT $3`, string(state), changedBefore, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Withdrawal
+	for rows.Next() {
+		w, err := scan(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, w)
+	}
+	return out, rows.Err()
+}
+
+// SetExecution records the network fee and the confirmation count of a
+// withdrawal's transaction (no state change).
+func (s *Store) SetExecution(ctx context.Context, id int64, networkFee, feeAsset string, confirmations int64) error {
+	_, err := s.pool.Exec(ctx, `UPDATE withdrawals SET network_fee = COALESCE(NULLIF($2, ''), network_fee),
+		fee_asset = COALESCE(NULLIF($3, ''), fee_asset), confirmations = GREATEST(confirmations, $4) WHERE id = $1`,
+		id, networkFee, feeAsset, confirmations)
+	return err
+}
+
+// Touch moves a withdrawal's updated_at forward without a state change, so a
+// worker that cannot finish it now retries it after its backoff.
+func (s *Store) Touch(ctx context.Context, id int64, now time.Time, reason string) error {
+	_, err := s.pool.Exec(ctx, `UPDATE withdrawals SET updated_at = $2, attempts = attempts + 1, reason = $3 WHERE id = $1`, id, now, reason)
+	return err
+}
+
+// ListUnfinalized returns final withdrawals whose ledger effect is not yet recorded.
+func (s *Store) ListUnfinalized(ctx context.Context, limit int) ([]Withdrawal, error) {
+	rows, err := s.pool.Query(ctx, `SELECT id, user_id, chain, asset, amount::text, destination, status, reason, COALESCE(txid, ''), created_at, updated_at, confirmations, network_fee, fee_asset
+		FROM withdrawals WHERE status IN ('CONFIRMED', 'REJECTED', 'FAILED') AND NOT ledger_finalized ORDER BY id LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Withdrawal
+	for rows.Next() {
+		w, err := scan(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, w)
+	}
+	return out, rows.Err()
+}
+
+// MarkFinalized records that the ledger effect of a final state was applied.
+func (s *Store) MarkFinalized(ctx context.Context, id int64) error {
+	_, err := s.pool.Exec(ctx, `UPDATE withdrawals SET ledger_finalized = true WHERE id = $1`, id)
+	return err
+}
+
+// MarkReviewed records the admin who decided on a withdrawal.
+func (s *Store) MarkReviewed(ctx context.Context, id, admin int64) error {
+	_, err := s.pool.Exec(ctx, `UPDATE withdrawals SET reviewed_by = $2 WHERE id = $1`, id, admin)
+	return err
+}
+
+// CountByState returns how many withdrawals are in each non-final state.
+func (s *Store) CountByState(ctx context.Context) (map[rules.State]int64, error) {
+	rows, err := s.pool.Query(ctx, `SELECT status, count(*) FROM withdrawals WHERE status NOT IN ('CONFIRMED', 'REJECTED', 'FAILED') GROUP BY status`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[rules.State]int64{}
+	for rows.Next() {
+		var st string
+		var n int64
+		if err := rows.Scan(&st, &n); err != nil {
+			return nil, err
+		}
+		out[rules.State(st)] = n
+	}
+	return out, rows.Err()
 }

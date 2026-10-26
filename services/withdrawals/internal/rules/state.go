@@ -21,10 +21,10 @@ const (
 	PendingReview State = "PENDING_REVIEW" // above the threshold: waits for an admin
 	Approved      State = "APPROVED"       // may be signed and broadcast
 	Signing       State = "SIGNING"        // handed to the signer
-	Broadcast     State = "BROADCAST"      // in the mempool; confirmations pending
-	Confirmed     State = "CONFIRMED"      // final: settled to EXTERNAL
+	Broadcast     State = "BROADCAST"      // sent to the network; funds still HELD until confirmed
+	Confirmed     State = "CONFIRMED"      // final: threshold reached, hold settled to EXTERNAL
 	Rejected      State = "REJECTED"       // final: screening or an admin said no; hold released
-	Failed        State = "FAILED"         // final: could not be broadcast; hold released
+	Failed        State = "FAILED"         // final: hold refused, signing refused or the tx reverted; hold released
 )
 
 // Final reports whether no further transition is possible.
@@ -33,7 +33,7 @@ func (s State) Final() bool { return s == Confirmed || s == Rejected || s == Fai
 // transitions lists every allowed edge. Anything else is a bug or a stale
 // request and must be refused by the store (the guard is the expected from-state).
 var transitions = map[State][]State{
-	Requested:     {Screening},
+	Requested:     {Screening, Failed}, // Failed: the ledger hold was refused (insufficient funds)
 	Screening:     {PendingReview, Approved, Rejected},
 	PendingReview: {Approved, Rejected},
 	Approved:      {Signing, Failed},
