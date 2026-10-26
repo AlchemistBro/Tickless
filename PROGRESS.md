@@ -91,6 +91,11 @@ Source: [docs/review/phase-3.1-fixes.md](docs/review/phase-3.1-fixes.md).
 7. notifier: consumes RabbitMQ `notifications` (retry with exponential backoff and a dead-letter queue `notifications.dlq`), renders templates, sends via SMTP to Mailpit. Events: signup verification, deposit credited, withdrawal requested/sent, order filled (opt-in).
 8. Tests: state machine table tests and random interleavings; limits edge cases at the UTC day boundary; mTLS rejects a foreign client; e2e withdrawal on BTC and ETH with a below-threshold (auto) and an above-threshold (admin-approved) case; chaos `SMTP fails` (Mailpit paused) asserts notifications are retried and land in DLQ after the retry budget, and that withdrawal state is unaffected; invariants 1-3 still hold after every e2e run.
 Status: planning complete; implementation in slices, each committed with its tests.
+- [x] Slice 1 — `services/withdrawals/internal/rules` (commit e33e2a9): state machine (exhaustive edge test + random walks), destination validation (BTC regtest bech32 only, ETH format + EIP-55 when mixed case, zero address refused), UTC daily limit (exact Int128, releases on REJECTED/FAILED), review threshold (`Route`: strictly above goes to PENDING_REVIEW). 97% statement coverage.
+- [ ] Slice 2 — store (withdrawals DB, guarded transitions, outbox) and the gRPC/REST path with TOTP check.
+- [ ] Slice 3 — signer (separate binary, mTLS, own key) and broadcast on bitcoind/Anvil.
+- [ ] Slice 4 — screening consumer and admin approval; RabbitMQ review queue.
+- [ ] Slice 5 — notifier (RabbitMQ retries, DLQ), SMTP chaos test, e2e on both chains.
 - [ ] E2E withdrawal on both chains
 - [ ] Above-threshold withdrawal executes only after admin approval
 - [ ] SMTP failure chaos test passes
