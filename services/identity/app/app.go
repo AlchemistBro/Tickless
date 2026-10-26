@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -164,8 +165,12 @@ func mapErr(err error) error {
 		return status.Error(codes.Unauthenticated, err.Error())
 	case errors.Is(err, service.ErrEmailNotVerified), errors.Is(err, service.ErrFrozen):
 		return status.Error(codes.PermissionDenied, err.Error())
-	case errors.Is(err, service.ErrNotFound):
+	case errors.Is(err, service.ErrNotFound), errors.Is(err, service.ErrTOTPNotSetUp):
 		return status.Error(codes.NotFound, err.Error())
+	case errors.Is(err, service.ErrTOTPInvalid):
+		return status.Error(codes.Unauthenticated, err.Error())
+	case errors.Is(err, service.ErrTOTPConfirmed):
+		return status.Error(codes.FailedPrecondition, err.Error())
 	default:
 		slog.Error("identity rpc failed", "err", err)
 		return status.Error(codes.Internal, "internal error")
@@ -272,4 +277,47 @@ func (v *server) ListFrozen(ctx context.Context, _ *identityv1.ListFrozenRequest
 		return nil, mapErr(err)
 	}
 	return &identityv1.ListFrozenResponse{UserIds: ids}, nil
+}
+
+func (s *server) EnrollTOTP(ctx context.Context, r *identityv1.EnrollTOTPRequest) (*identityv1.EnrollTOTPResponse, error) {
+	p, err := s.s.GetProfile(ctx, r.UserId)
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	secret, err := s.s.EnrollTOTP(ctx, r.UserId)
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	uri := fmt.Sprintf("otpauth://totp/Tickless:%s?secret=%s&issuer=Tickless&algorithm=SHA1&digits=6&period=30", url.PathEscape(p.Email), secret)
+	return &identityv1.EnrollTOTPResponse{Secret: secret, OtpauthUri: uri}, nil
+}
+
+func (s *server) ConfirmTOTP(ctx context.Context, r *identityv1.ConfirmTOTPRequest) (*identityv1.ConfirmTOTPResponse, error) {
+	if err := s.s.ConfirmTOTP(ctx, r.UserId, r.Code); err != nil {
+		return nil, mapErr(err)
+	}
+	return &identityv1.ConfirmTOTPResponse{}, nil
+}
+
+func (s *server) VerifyTOTP(ctx context.Context, r *identityv1.VerifyTOTPRequest) (*identityv1.VerifyTOTPResponse, error) {
+	if err := s.s.VerifyTOTP(ctx, r.UserId, r.Code); err != nil {
+		return nil, mapErr(err)
+	}
+	return &identityv1.VerifyTOTPResponse{}, nil
+}
+
+func (s *server) GetUser(ctx context.Context, r *identityv1.GetUserRequest) (*identityv1.GetUserResponse, error) {
+	p, err := s.s.GetProfile(ctx, r.UserId)
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	return &identityv1.GetUserResponse{UserId: p.ID, Email: p.Email, Role: p.Role, Frozen: p.Frozen,
+		EmailVerified: p.Verified, TotpEnabled: p.TOTPEnabled, NotifyOrderFills: p.NotifyOrderFills}, nil
+}
+
+func (s *server) SetNotificationPrefs(ctx context.Context, r *identityv1.SetNotificationPrefsRequest) (*identityv1.SetNotificationPrefsResponse, error) {
+	if err := s.s.SetNotifyOrderFills(ctx, r.UserId, r.NotifyOrderFills); err != nil {
+		return nil, mapErr(err)
+	}
+	return &identityv1.SetNotificationPrefsResponse{}, nil
 }
