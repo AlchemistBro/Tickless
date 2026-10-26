@@ -79,7 +79,7 @@ e2e:
 chaos-dup:
 	$(COMPOSE) down -v
 	CHAOS_DUPLICATE_PUBLISH=true "$(MAKE)" up
-	cd e2e && E2E_EXPECT_DUPLICATES=true go test -tags e2e -count=1 -timeout 15m -v -run 'TestTradeFlow|TestOrderTypesReleaseHolds|TestPublicMarketDataFlowsThroughTheGateway' ./... ; rc=$$?; cd .. ; $(COMPOSE) down -v; exit $$rc
+	cd e2e && E2E_EXPECT_DUPLICATES=true go test -tags e2e -count=1 -timeout 15m -v -run 'TestTradeFlow|TestOrderTypesReleaseHolds|TestPublicMarketDataFlowsThroughTheGateway|TestBTCDepositIsCreditedAfterTwoConfirmations|TestETHAndUSDTDeposits' ./... ; rc=$$?; cd .. ; $(COMPOSE) down -v; exit $$rc
 
 down:
 	$(COMPOSE) down -v
