@@ -1,0 +1,494 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Defs" targetNamespace="http://tickless.example/bpmn" exporter="bpmnrows" exporterVersion="2">
+  <bpmn:collaboration id="Collab">
+    <bpmn:participant id="Pool_Partner" name="Профессиональный партнёр (бутик)" />
+    <bpmn:participant id="Pool_Place" name="Процесс размещения ассортимента" />
+    <bpmn:participant id="Pool_Main_r1" name="ООО «ОСКЕЛИ ГРУПП» · AS IS · ряд 1/6" processRef="Proc_AS_r1" />
+    <bpmn:participant id="Pool_Main_r2" name="ООО «ОСКЕЛИ ГРУПП» · AS IS · ряд 2/6" processRef="Proc_AS_r2" />
+    <bpmn:participant id="Pool_Main_r3" name="ООО «ОСКЕЛИ ГРУПП» · AS IS · ряд 3/6" processRef="Proc_AS_r3" />
+    <bpmn:participant id="Pool_Main_r4" name="ООО «ОСКЕЛИ ГРУПП» · AS IS · ряд 4/6" processRef="Proc_AS_r4" />
+    <bpmn:participant id="Pool_Main_r5" name="ООО «ОСКЕЛИ ГРУПП» · AS IS · ряд 5/6" processRef="Proc_AS_r5" />
+    <bpmn:participant id="Pool_Main_r6" name="ООО «ОСКЕЛИ ГРУПП» · AS IS · ряд 6/6" processRef="Proc_AS_r6" />
+    <bpmn:messageFlow id="m1" sourceRef="Pool_Partner" targetRef="St" name="Реестр ассортимента (файл по почте)" />
+    <bpmn:messageFlow id="m2" sourceRef="T7" targetRef="Pool_Partner" name="Запрос уточнения" />
+    <bpmn:messageFlow id="m3" sourceRef="Pool_Partner" targetRef="CE" name="Ответ партнёра" />
+    <bpmn:messageFlow id="m4" sourceRef="E" targetRef="Pool_Place" name="Проверенные данные" />
+  </bpmn:collaboration>
+  <bpmn:process id="Proc_AS_r1" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарных данных (AS IS) · ряд 1" isExecutable="false">
+    <bpmn:laneSet id="Proc_AS_r1_laneset">
+      <bpmn:lane id="Lane_B2B_r1" name="Менеджер B2B-направления">
+        <bpmn:flowNodeRef>St</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>LKT0_1</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Spec_r1" name="Специалист по ассортименту и контенту">
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="St" name="Реестр ассортимента получен от партнёра">
+      <bpmn:outgoing>f1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="St_def" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="T1" name="Получить реестр по почте, зафиксировать поступление произвольно">
+      <bpmn:incoming>f1</bpmn:incoming>
+      <bpmn:outgoing>SFT0_1</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:intermediateThrowEvent id="LKT0_1" name="Переход к ряду 2">
+      <bpmn:incoming>SFT0_1</bpmn:incoming>
+      <bpmn:linkEventDefinition id="LKT0_1_def" name="R1" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:sequenceFlow id="f1" sourceRef="St" targetRef="T1" />
+    <bpmn:sequenceFlow id="SFT0_1" sourceRef="T1" targetRef="LKT0_1" />
+  </bpmn:process>
+  <bpmn:process id="Proc_AS_r2" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарных данных (AS IS) · ряд 2" isExecutable="false">
+    <bpmn:laneSet id="Proc_AS_r2_laneset">
+      <bpmn:lane id="Lane_B2B_r2" name="Менеджер B2B-направления">
+        <bpmn:flowNodeRef>T2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>LKC0_1</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Spec_r2" name="Специалист по ассортименту и контенту">
+        <bpmn:flowNodeRef>T3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>LKT0_2</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:userTask id="T2" name="Визуально проверить комплектность файла">
+      <bpmn:incoming>SFK0_1</bpmn:incoming>
+      <bpmn:outgoing>f3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="T3" name="Вручную сопоставить категории и бренды со справочниками">
+      <bpmn:incoming>f3</bpmn:incoming>
+      <bpmn:outgoing>SFT0_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:intermediateCatchEvent id="LKC0_1" name="Переход из ряда 1">
+      <bpmn:outgoing>SFK0_1</bpmn:outgoing>
+      <bpmn:linkEventDefinition id="LKC0_1_def" name="R1" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateThrowEvent id="LKT0_2" name="Переход к ряду 3">
+      <bpmn:incoming>SFT0_2</bpmn:incoming>
+      <bpmn:linkEventDefinition id="LKT0_2_def" name="R2" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:sequenceFlow id="SFK0_1" sourceRef="LKC0_1" targetRef="T2" />
+    <bpmn:sequenceFlow id="f3" sourceRef="T2" targetRef="T3" />
+    <bpmn:sequenceFlow id="SFT0_2" sourceRef="T3" targetRef="LKT0_2" />
+  </bpmn:process>
+  <bpmn:process id="Proc_AS_r3" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарных данных (AS IS) · ряд 3" isExecutable="false">
+    <bpmn:laneSet id="Proc_AS_r3_laneset">
+      <bpmn:lane id="Lane_B2B_r3" name="Менеджер B2B-направления">
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Spec_r3" name="Специалист по ассортименту и контенту">
+        <bpmn:flowNodeRef>T4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T5</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>LKC0_2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>LKC0_5</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>LKT0_3</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:userTask id="T4" name="Вручную привести размеры, цвета, цены, наличие к формату">
+      <bpmn:incoming>SFK0_2</bpmn:incoming>
+      <bpmn:outgoing>f5</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="T5" name="Вручную сверить обязательные атрибуты с матрицей">
+      <bpmn:incoming>f5</bpmn:incoming>
+      <bpmn:incoming>SFK0_5</bpmn:incoming>
+      <bpmn:outgoing>SFT0_3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:intermediateCatchEvent id="LKC0_2" name="Переход из ряда 2">
+      <bpmn:outgoing>SFK0_2</bpmn:outgoing>
+      <bpmn:linkEventDefinition id="LKC0_2_def" name="R2" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="LKC0_5" name="Переход из ряда 5">
+      <bpmn:outgoing>SFK0_5</bpmn:outgoing>
+      <bpmn:linkEventDefinition id="LKC0_5_def" name="R5" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateThrowEvent id="LKT0_3" name="Переход к ряду 4">
+      <bpmn:incoming>SFT0_3</bpmn:incoming>
+      <bpmn:linkEventDefinition id="LKT0_3_def" name="R3" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:sequenceFlow id="SFK0_2" sourceRef="LKC0_2" targetRef="T4" />
+    <bpmn:sequenceFlow id="f5" sourceRef="T4" targetRef="T5" />
+    <bpmn:sequenceFlow id="SFT0_3" sourceRef="T5" targetRef="LKT0_3" />
+    <bpmn:sequenceFlow id="SFK0_5" sourceRef="LKC0_5" targetRef="T5" name="повторная проверка" />
+  </bpmn:process>
+  <bpmn:process id="Proc_AS_r4" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарных данных (AS IS) · ряд 4" isExecutable="false">
+    <bpmn:laneSet id="Proc_AS_r4_laneset">
+      <bpmn:lane id="Lane_B2B_r4" name="Менеджер B2B-направления">
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Spec_r4" name="Специалист по ассортименту и контенту">
+        <bpmn:flowNodeRef>T6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>LKC0_3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>LKT0_4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>LKT0_6</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:userTask id="T6" name="Вручную искать дубли по артикулам">
+      <bpmn:incoming>SFK0_3</bpmn:incoming>
+      <bpmn:outgoing>f7</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="G1" name="Нужны уточнения у партнёра?">
+      <bpmn:incoming>f7</bpmn:incoming>
+      <bpmn:outgoing>SFT0_4</bpmn:outgoing>
+      <bpmn:outgoing>SFT0_6</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:intermediateCatchEvent id="LKC0_3" name="Переход из ряда 3">
+      <bpmn:outgoing>SFK0_3</bpmn:outgoing>
+      <bpmn:linkEventDefinition id="LKC0_3_def" name="R3" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateThrowEvent id="LKT0_4" name="Переход к ряду 5">
+      <bpmn:incoming>SFT0_4</bpmn:incoming>
+      <bpmn:linkEventDefinition id="LKT0_4_def" name="R4" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:intermediateThrowEvent id="LKT0_6" name="Переход к ряду 5">
+      <bpmn:incoming>SFT0_6</bpmn:incoming>
+      <bpmn:linkEventDefinition id="LKT0_6_def" name="R6" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:sequenceFlow id="SFK0_3" sourceRef="LKC0_3" targetRef="T6" />
+    <bpmn:sequenceFlow id="f7" sourceRef="T6" targetRef="G1" />
+    <bpmn:sequenceFlow id="SFT0_4" sourceRef="G1" targetRef="LKT0_4" />
+    <bpmn:sequenceFlow id="SFT0_6" sourceRef="G1" targetRef="LKT0_6" />
+  </bpmn:process>
+  <bpmn:process id="Proc_AS_r5" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарных данных (AS IS) · ряд 5" isExecutable="false">
+    <bpmn:laneSet id="Proc_AS_r5_laneset">
+      <bpmn:lane id="Lane_B2B_r5" name="Менеджер B2B-направления">
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Spec_r5" name="Специалист по ассортименту и контенту">
+        <bpmn:flowNodeRef>T7</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T8</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>CE</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T9</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>LKC0_4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>LKC0_6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>LKT0_5</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>LKT0_7</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:sendTask id="T7" name="Запросить уточнение по почте или в мессенджере">
+      <bpmn:incoming>SFK0_4</bpmn:incoming>
+      <bpmn:outgoing>f9</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:userTask id="T8" name="Вручную завести карточки в каталоге и учёт (двойной ввод)">
+      <bpmn:incoming>SFK0_6</bpmn:incoming>
+      <bpmn:outgoing>f12</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:intermediateCatchEvent id="CE" name="Ответ партнёра получен">
+      <bpmn:incoming>f9</bpmn:incoming>
+      <bpmn:outgoing>SFT0_5</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="CE_def" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="T9" name="Вручную составить отчёт о несоответствиях">
+      <bpmn:incoming>f12</bpmn:incoming>
+      <bpmn:outgoing>SFT0_7</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:intermediateCatchEvent id="LKC0_4" name="Переход из ряда 4">
+      <bpmn:outgoing>SFK0_4</bpmn:outgoing>
+      <bpmn:linkEventDefinition id="LKC0_4_def" name="R4" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="LKC0_6" name="Переход из ряда 4">
+      <bpmn:outgoing>SFK0_6</bpmn:outgoing>
+      <bpmn:linkEventDefinition id="LKC0_6_def" name="R6" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateThrowEvent id="LKT0_5" name="Переход к ряду 3">
+      <bpmn:incoming>SFT0_5</bpmn:incoming>
+      <bpmn:linkEventDefinition id="LKT0_5_def" name="R5" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:intermediateThrowEvent id="LKT0_7" name="Переход к ряду 6">
+      <bpmn:incoming>SFT0_7</bpmn:incoming>
+      <bpmn:linkEventDefinition id="LKT0_7_def" name="R7" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:sequenceFlow id="SFK0_4" sourceRef="LKC0_4" targetRef="T7" name="Да" />
+    <bpmn:sequenceFlow id="f9" sourceRef="T7" targetRef="CE" />
+    <bpmn:sequenceFlow id="SFT0_5" sourceRef="CE" targetRef="LKT0_5" />
+    <bpmn:sequenceFlow id="SFK0_6" sourceRef="LKC0_6" targetRef="T8" name="Нет" />
+    <bpmn:sequenceFlow id="f12" sourceRef="T8" targetRef="T9" />
+    <bpmn:sequenceFlow id="SFT0_7" sourceRef="T9" targetRef="LKT0_7" />
+  </bpmn:process>
+  <bpmn:process id="Proc_AS_r6" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарных данных (AS IS) · ряд 6" isExecutable="false">
+    <bpmn:laneSet id="Proc_AS_r6_laneset">
+      <bpmn:lane id="Lane_B2B_r6" name="Менеджер B2B-направления">
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Spec_r6" name="Специалист по ассортименту и контенту">
+        <bpmn:flowNodeRef>T10</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>E</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>LKC0_7</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:userTask id="T10" name="Подтвердить готовность позиций после ручного ввода">
+      <bpmn:incoming>SFK0_7</bpmn:incoming>
+      <bpmn:outgoing>f14</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="E" name="Данные переданы в размещение ассортимента">
+      <bpmn:incoming>f14</bpmn:incoming>
+      <bpmn:messageEventDefinition id="E_def" />
+    </bpmn:endEvent>
+    <bpmn:intermediateCatchEvent id="LKC0_7" name="Переход из ряда 5">
+      <bpmn:outgoing>SFK0_7</bpmn:outgoing>
+      <bpmn:linkEventDefinition id="LKC0_7_def" name="R7" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="SFK0_7" sourceRef="LKC0_7" targetRef="T10" />
+    <bpmn:sequenceFlow id="f14" sourceRef="T10" targetRef="E" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagram">
+    <bpmndi:BPMNPlane id="Plane" bpmnElement="Collab">
+    <bpmndi:BPMNShape id="Pool_Partner_di" bpmnElement="Pool_Partner" isHorizontal="true">
+      <dc:Bounds x="0" y="0" width="700" height="60" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Pool_Place_di" bpmnElement="Pool_Place" isHorizontal="true">
+      <dc:Bounds x="0" y="2410" width="700" height="60" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Pool_Main_r1_di" bpmnElement="Pool_Main_r1" isHorizontal="true">
+      <dc:Bounds x="0" y="100" width="700" height="290" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Lane_B2B_r1_di" bpmnElement="Lane_B2B_r1" isHorizontal="true">
+      <dc:Bounds x="30" y="100" width="670" height="130" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Lane_Spec_r1_di" bpmnElement="Lane_Spec_r1" isHorizontal="true">
+      <dc:Bounds x="30" y="230" width="670" height="130" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Pool_Main_r2_di" bpmnElement="Pool_Main_r2" isHorizontal="true">
+      <dc:Bounds x="0" y="430" width="700" height="290" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Lane_B2B_r2_di" bpmnElement="Lane_B2B_r2" isHorizontal="true">
+      <dc:Bounds x="30" y="430" width="670" height="130" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Lane_Spec_r2_di" bpmnElement="Lane_Spec_r2" isHorizontal="true">
+      <dc:Bounds x="30" y="560" width="670" height="130" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Pool_Main_r3_di" bpmnElement="Pool_Main_r3" isHorizontal="true">
+      <dc:Bounds x="0" y="760" width="700" height="400" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Lane_B2B_r3_di" bpmnElement="Lane_B2B_r3" isHorizontal="true">
+      <dc:Bounds x="30" y="760" width="670" height="130" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Lane_Spec_r3_di" bpmnElement="Lane_Spec_r3" isHorizontal="true">
+      <dc:Bounds x="30" y="890" width="670" height="240" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Pool_Main_r4_di" bpmnElement="Pool_Main_r4" isHorizontal="true">
+      <dc:Bounds x="0" y="1200" width="700" height="400" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Lane_B2B_r4_di" bpmnElement="Lane_B2B_r4" isHorizontal="true">
+      <dc:Bounds x="30" y="1200" width="670" height="130" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Lane_Spec_r4_di" bpmnElement="Lane_Spec_r4" isHorizontal="true">
+      <dc:Bounds x="30" y="1330" width="670" height="240" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Pool_Main_r5_di" bpmnElement="Pool_Main_r5" isHorizontal="true">
+      <dc:Bounds x="0" y="1640" width="700" height="400" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Lane_B2B_r5_di" bpmnElement="Lane_B2B_r5" isHorizontal="true">
+      <dc:Bounds x="30" y="1640" width="670" height="130" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Lane_Spec_r5_di" bpmnElement="Lane_Spec_r5" isHorizontal="true">
+      <dc:Bounds x="30" y="1770" width="670" height="240" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Pool_Main_r6_di" bpmnElement="Pool_Main_r6" isHorizontal="true">
+      <dc:Bounds x="0" y="2080" width="700" height="290" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Lane_B2B_r6_di" bpmnElement="Lane_B2B_r6" isHorizontal="true">
+      <dc:Bounds x="30" y="2080" width="670" height="130" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Lane_Spec_r6_di" bpmnElement="Lane_Spec_r6" isHorizontal="true">
+      <dc:Bounds x="30" y="2210" width="670" height="130" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="St_di" bpmnElement="St">
+      <dc:Bounds x="207" y="147" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="T1_di" bpmnElement="T1">
+      <dc:Bounds x="305" y="119" width="100" height="92" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="T2_di" bpmnElement="T2">
+      <dc:Bounds x="175" y="449" width="100" height="92" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="T3_di" bpmnElement="T3">
+      <dc:Bounds x="305" y="579" width="100" height="92" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="T4_di" bpmnElement="T4">
+      <dc:Bounds x="175" y="964" width="100" height="92" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="T5_di" bpmnElement="T5">
+      <dc:Bounds x="305" y="964" width="100" height="92" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="T6_di" bpmnElement="T6">
+      <dc:Bounds x="175" y="1404" width="100" height="92" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="G1_di" bpmnElement="G1">
+      <dc:Bounds x="330" y="1425" width="50" height="50" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="T7_di" bpmnElement="T7">
+      <dc:Bounds x="175" y="1789" width="100" height="92" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="T8_di" bpmnElement="T8">
+      <dc:Bounds x="175" y="1899" width="100" height="92" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="CE_di" bpmnElement="CE">
+      <dc:Bounds x="337" y="1817" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="T9_di" bpmnElement="T9">
+      <dc:Bounds x="305" y="1899" width="100" height="92" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="T10_di" bpmnElement="T10">
+      <dc:Bounds x="175" y="2229" width="100" height="92" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="E_di" bpmnElement="E">
+      <dc:Bounds x="337" y="2257" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="LKT0_1_di" bpmnElement="LKT0_1">
+      <dc:Bounds x="467" y="147" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="LKC0_1_di" bpmnElement="LKC0_1">
+      <dc:Bounds x="77" y="477" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="LKT0_2_di" bpmnElement="LKT0_2">
+      <dc:Bounds x="467" y="607" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="LKC0_2_di" bpmnElement="LKC0_2">
+      <dc:Bounds x="77" y="937" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="LKC0_5_di" bpmnElement="LKC0_5">
+      <dc:Bounds x="77" y="1047" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="LKT0_3_di" bpmnElement="LKT0_3">
+      <dc:Bounds x="467" y="992" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="LKC0_3_di" bpmnElement="LKC0_3">
+      <dc:Bounds x="77" y="1432" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="LKT0_4_di" bpmnElement="LKT0_4">
+      <dc:Bounds x="467" y="1377" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="LKT0_6_di" bpmnElement="LKT0_6">
+      <dc:Bounds x="467" y="1487" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="LKC0_4_di" bpmnElement="LKC0_4">
+      <dc:Bounds x="77" y="1817" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="LKC0_6_di" bpmnElement="LKC0_6">
+      <dc:Bounds x="77" y="1927" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="LKT0_5_di" bpmnElement="LKT0_5">
+      <dc:Bounds x="467" y="1817" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="LKT0_7_di" bpmnElement="LKT0_7">
+      <dc:Bounds x="467" y="1927" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="LKC0_7_di" bpmnElement="LKC0_7">
+      <dc:Bounds x="77" y="2257" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNEdge id="m1_di" bpmnElement="m1">
+      <di:waypoint x="225" y="60" />
+      <di:waypoint x="225" y="147" />
+      <bpmndi:BPMNLabel><dc:Bounds x="229" y="44" width="210" height="14" /></bpmndi:BPMNLabel>
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="m2_di" bpmnElement="m2">
+      <di:waypoint x="225" y="1789" />
+      <di:waypoint x="225" y="60" />
+      <bpmndi:BPMNLabel><dc:Bounds x="229" y="1773" width="96" height="14" /></bpmndi:BPMNLabel>
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="m3_di" bpmnElement="m3">
+      <di:waypoint x="355" y="60" />
+      <di:waypoint x="355" y="1817" />
+      <bpmndi:BPMNLabel><dc:Bounds x="359" y="44" width="84" height="14" /></bpmndi:BPMNLabel>
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="m4_di" bpmnElement="m4">
+      <di:waypoint x="355" y="2293" />
+      <di:waypoint x="355" y="2410" />
+      <bpmndi:BPMNLabel><dc:Bounds x="359" y="2277" width="108" height="14" /></bpmndi:BPMNLabel>
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="f1_di" bpmnElement="f1">
+      <di:waypoint x="243" y="165" />
+      <di:waypoint x="305" y="165" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="SFT0_1_di" bpmnElement="SFT0_1">
+      <di:waypoint x="405" y="165" />
+      <di:waypoint x="467" y="165" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="SFK0_1_di" bpmnElement="SFK0_1">
+      <di:waypoint x="113" y="495" />
+      <di:waypoint x="175" y="495" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="f3_di" bpmnElement="f3">
+      <di:waypoint x="275" y="495" />
+      <di:waypoint x="290" y="495" />
+      <di:waypoint x="290" y="625" />
+      <di:waypoint x="305" y="625" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="SFT0_2_di" bpmnElement="SFT0_2">
+      <di:waypoint x="405" y="625" />
+      <di:waypoint x="467" y="625" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="SFK0_2_di" bpmnElement="SFK0_2">
+      <di:waypoint x="113" y="955" />
+      <di:waypoint x="144" y="955" />
+      <di:waypoint x="144" y="1010" />
+      <di:waypoint x="175" y="1010" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="f5_di" bpmnElement="f5">
+      <di:waypoint x="275" y="1010" />
+      <di:waypoint x="305" y="1010" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="SFT0_3_di" bpmnElement="SFT0_3">
+      <di:waypoint x="405" y="1010" />
+      <di:waypoint x="467" y="1010" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="SFK0_3_di" bpmnElement="SFK0_3">
+      <di:waypoint x="113" y="1450" />
+      <di:waypoint x="175" y="1450" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="f7_di" bpmnElement="f7">
+      <di:waypoint x="275" y="1450" />
+      <di:waypoint x="330" y="1450" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="SFT0_4_di" bpmnElement="SFT0_4">
+      <di:waypoint x="380" y="1450" />
+      <di:waypoint x="424" y="1450" />
+      <di:waypoint x="424" y="1395" />
+      <di:waypoint x="467" y="1395" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="SFK0_4_di" bpmnElement="SFK0_4">
+      <di:waypoint x="113" y="1835" />
+      <di:waypoint x="175" y="1835" />
+      <bpmndi:BPMNLabel><dc:Bounds x="117" y="1819" width="40" height="14" /></bpmndi:BPMNLabel>
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="f9_di" bpmnElement="f9">
+      <di:waypoint x="275" y="1835" />
+      <di:waypoint x="337" y="1835" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="SFT0_5_di" bpmnElement="SFT0_5">
+      <di:waypoint x="373" y="1835" />
+      <di:waypoint x="467" y="1835" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="SFK0_5_di" bpmnElement="SFK0_5">
+      <di:waypoint x="113" y="1065" />
+      <di:waypoint x="209" y="1065" />
+      <di:waypoint x="209" y="1010" />
+      <di:waypoint x="305" y="1010" />
+      <bpmndi:BPMNLabel><dc:Bounds x="117" y="1049" width="108" height="14" /></bpmndi:BPMNLabel>
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="SFT0_6_di" bpmnElement="SFT0_6">
+      <di:waypoint x="380" y="1450" />
+      <di:waypoint x="424" y="1450" />
+      <di:waypoint x="424" y="1505" />
+      <di:waypoint x="467" y="1505" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="SFK0_6_di" bpmnElement="SFK0_6">
+      <di:waypoint x="113" y="1945" />
+      <di:waypoint x="175" y="1945" />
+      <bpmndi:BPMNLabel><dc:Bounds x="117" y="1929" width="40" height="14" /></bpmndi:BPMNLabel>
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="f12_di" bpmnElement="f12">
+      <di:waypoint x="275" y="1945" />
+      <di:waypoint x="305" y="1945" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="SFT0_7_di" bpmnElement="SFT0_7">
+      <di:waypoint x="405" y="1945" />
+      <di:waypoint x="467" y="1945" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="SFK0_7_di" bpmnElement="SFK0_7">
+      <di:waypoint x="113" y="2275" />
+      <di:waypoint x="175" y="2275" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="f14_di" bpmnElement="f14">
+      <di:waypoint x="275" y="2275" />
+      <di:waypoint x="337" y="2275" />
+    </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
