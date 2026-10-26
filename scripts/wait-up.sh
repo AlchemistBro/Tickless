@@ -12,6 +12,6 @@ probe() {
 }
 probe otel-collector http://localhost:13133/
 probe jaeger         http://localhost:16686/
-probe grafana        http://localhost:3000/api/health
+probe grafana        http://localhost:13000/api/health
 probe prometheus     http://localhost:9090/-/ready
-probe mailpit        http://localhost:8025/livez
+probe mailpit        http://localhost:18025/livez

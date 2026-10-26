@@ -33,7 +33,7 @@ func main() {
 	email := flag.String("email", "", "email of the user to credit (required)")
 	asset := flag.String("asset", "USDT", "asset symbol (BTC, ETH, USDT)")
 	amount := flag.String("amount", "10000", "amount in whole units, e.g. 0.5")
-	gateway := flag.String("gateway", env("E2E_GATEWAY", "http://localhost:8080"), "gateway URL")
+	gateway := flag.String("gateway", env("E2E_GATEWAY", "http://localhost:18080"), "gateway URL")
 	ledgerAddr := flag.String("ledger", env("E2E_LEDGER_GRPC", "127.0.0.1:9101"), "ledger gRPC address")
 	flag.Parse()
 	if *email == "" {

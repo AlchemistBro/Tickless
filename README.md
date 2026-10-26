@@ -58,13 +58,13 @@ make down
 | Интерфейс | Адрес |
 |---|---|
 | Веб-терминал | http://localhost:8088 |
-| Grafana | http://localhost:3000 (admin / admin) |
+| Grafana | http://localhost:13000 (admin / admin) |
 | Jaeger | http://localhost:16686 |
 | Prometheus | http://localhost:9090 |
-| Mailpit | http://localhost:8025 |
+| Mailpit | http://localhost:18025 |
 | RabbitMQ | http://localhost:15672 (tickless / tickless) |
 
-Все учётные данные здесь заглушки для локальной разработки. Порт Postgres на хосте `5433`, потому что `5432` часто занят локальной установкой.
+Все учётные данные здесь заглушки для локальной разработки. Хостовые порты сдвинуты, чтобы не конфликтовать с локальными установками и другими стеками: gateway `18080`, Postgres `15433`, Kafka `19092`, Grafana `13000`, Mailpit `18025`, OTel `14317`/`14318`. Внутри контейнеров всё по стандартным портам.
 
 ### Пример через curl
 

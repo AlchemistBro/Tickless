@@ -35,11 +35,11 @@ func env(k, def string) string {
 }
 
 var (
-	gatewayURL = env("E2E_GATEWAY", "http://localhost:8080")
+	gatewayURL = env("E2E_GATEWAY", "http://localhost:18080")
 	ledgerAddr = env("E2E_LEDGER_GRPC", "127.0.0.1:9101")
-	ledgerDSN  = env("E2E_LEDGER_DSN", "postgres://tickless:tickless@127.0.0.1:5433/ledger?sslmode=disable")
+	ledgerDSN  = env("E2E_LEDGER_DSN", "postgres://tickless:tickless@127.0.0.1:15433/ledger?sslmode=disable")
 	jaegerURL  = env("E2E_JAEGER", "http://localhost:16686")
-	kafkaAddr  = env("E2E_KAFKA", "127.0.0.1:9092")
+	kafkaAddr  = env("E2E_KAFKA", "127.0.0.1:19092")
 )
 
 // user is a registered, logged-in account.

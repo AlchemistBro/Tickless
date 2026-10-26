@@ -19,7 +19,7 @@ info:
 
     **Rate limits** return `429` with `Retry-After`.
 servers:
-  - url: http://localhost:8080
+  - url: http://localhost:18080
 security:
   - bearer: []
   - apiKey: []

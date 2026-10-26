@@ -52,8 +52,8 @@ endif
 up:
 	$(COMPOSE) up -d --build --wait --remove-orphans
 	bash scripts/wait-up.sh
-	@echo; echo "Grafana http://localhost:3000 (admin/admin)  Jaeger http://localhost:16686"
-	@echo "Prometheus http://localhost:9090  Mailpit http://localhost:8025  RabbitMQ http://localhost:15672 (tickless/tickless)"
+	@echo; echo "Grafana http://localhost:13000 (admin/admin)  Jaeger http://localhost:16686"
+	@echo "Prometheus http://localhost:9090  Mailpit http://localhost:18025  RabbitMQ http://localhost:15672 (tickless/tickless)"
 
 # Dev only: give a registered user funds (no deposits exist before Phase 5).
 #   make seed EMAIL=me@example.com ASSET=USDT AMOUNT=100000
