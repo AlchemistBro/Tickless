@@ -153,3 +153,31 @@ func Anvil(t testing.TB) string {
 	}
 	return "http://" + host + ":" + port.Port()
 }
+
+// RabbitMQ starts a RabbitMQ broker and returns its AMQP URL.
+func RabbitMQ(t testing.TB) string {
+	t.Helper()
+	ctx := context.Background()
+	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        "rabbitmq:4-management-alpine",
+			ExposedPorts: []string{"5672/tcp"},
+			Env:          map[string]string{"RABBITMQ_DEFAULT_USER": "test", "RABBITMQ_DEFAULT_PASS": "test"},
+			WaitingFor:   wait.ForLog("Server startup complete").WithStartupTimeout(3 * time.Minute),
+		},
+		Started: true,
+	})
+	if err != nil {
+		t.Fatalf("start rabbitmq: %v", err)
+	}
+	t.Cleanup(func() { _ = testcontainers.TerminateContainer(c) })
+	host, err := c.Host(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	port, err := c.MappedPort(ctx, "5672/tcp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return "amqp://test:test@" + host + ":" + port.Port() + "/"
+}
