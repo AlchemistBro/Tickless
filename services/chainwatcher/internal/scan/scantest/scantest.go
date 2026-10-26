@@ -207,7 +207,7 @@ func RunRandomHistories(t *testing.T, seeds, ops int, f Factory) {
 	watched := []string{"a1", "a2", "a3"}
 	for seed := 0; seed < seeds; seed++ {
 		t.Run(fmt.Sprint(seed), func(t *testing.T) {
-			rng := rand.New(rand.NewPCG(uint64(seed), 99))
+			rng := rand.New(rand.NewPCG(uint64(seed), 99)) //nolint:gosec // seeded on purpose: a failing history must be reproducible from its seed
 			required := int64(1 + rng.IntN(6))
 			c := NewChain(fmt.Sprintf("s%d", seed))
 			h := f(t, watched)
