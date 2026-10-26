@@ -34,7 +34,7 @@ type Block struct {
 // transfer to the store, which keeps only those to watched deposit addresses.
 type Transfer struct {
 	TxID    string
-	Index   int64 // BTC vout, ERC-20 log index, 0 for native ETH
+	Index   int64 // BTC vout, ERC-20 log index, -1 for the value of an ETH transaction
 	Address string
 	Asset   string
 	Amount  money.Int128

@@ -122,3 +122,34 @@ func Bitcoind(t testing.TB) (url, user, password string) {
 	}
 	return "http://" + host + ":" + port.Port(), user, password
 }
+
+// Anvil starts a Foundry Anvil devnet (automine) and returns its JSON-RPC URL.
+// Its default accounts are unlocked, so tests send transactions with
+// eth_sendTransaction and never handle a private key.
+func Anvil(t testing.TB) string {
+	t.Helper()
+	ctx := context.Background()
+	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        "ghcr.io/foundry-rs/foundry:v1.2.3",
+			Entrypoint:   []string{"anvil"},
+			Cmd:          []string{"--host", "0.0.0.0", "--chain-id", "31337"},
+			ExposedPorts: []string{"8545/tcp"},
+			WaitingFor:   wait.ForLog("Listening on").WithStartupTimeout(2 * time.Minute),
+		},
+		Started: true,
+	})
+	if err != nil {
+		t.Fatalf("start anvil: %v", err)
+	}
+	t.Cleanup(func() { _ = testcontainers.TerminateContainer(c) })
+	host, err := c.Host(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	port, err := c.MappedPort(ctx, "8545/tcp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return "http://" + host + ":" + port.Port()
+}

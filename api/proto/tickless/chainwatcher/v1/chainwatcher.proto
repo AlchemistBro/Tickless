@@ -43,7 +43,8 @@ message Deposit {
   int64 id = 1;
   string chain = 2;
   string txid = 3;
-  // Output index (BTC vout) or log index (ERC-20); 0 for a native ETH transfer.
+  // Output index (BTC vout) or log index (ERC-20); -1 for the value of a native
+  // ETH transaction (so it never collides with log index 0 of the same tx).
   int64 index = 4;
   string asset = 5;
   tickless.common.v1.Amount amount = 6;

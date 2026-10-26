@@ -299,7 +299,8 @@ type Deposit struct {
 	Id    int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	Chain string                 `protobuf:"bytes,2,opt,name=chain,proto3" json:"chain,omitempty"`
 	Txid  string                 `protobuf:"bytes,3,opt,name=txid,proto3" json:"txid,omitempty"`
-	// Output index (BTC vout) or log index (ERC-20); 0 for a native ETH transfer.
+	// Output index (BTC vout) or log index (ERC-20); -1 for the value of a native
+	// ETH transaction (so it never collides with log index 0 of the same tx).
 	Index                 int64         `protobuf:"varint,4,opt,name=index,proto3" json:"index,omitempty"`
 	Asset                 string        `protobuf:"bytes,5,opt,name=asset,proto3" json:"asset,omitempty"`
 	Amount                *v1.Amount    `protobuf:"bytes,6,opt,name=amount,proto3" json:"amount,omitempty"`

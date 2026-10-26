@@ -31,7 +31,7 @@ CREATE TABLE deposits (
     id               BIGSERIAL PRIMARY KEY,
     chain            TEXT           NOT NULL,
     txid             TEXT           NOT NULL,
-    idx              BIGINT         NOT NULL CHECK (idx >= 0),
+    idx              BIGINT         NOT NULL CHECK (idx >= -1), -- -1 = the value of an Ethereum transaction itself
     address          TEXT           NOT NULL,
     user_id          BIGINT         NOT NULL,
     asset            TEXT           NOT NULL,
