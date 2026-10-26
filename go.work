@@ -4,6 +4,7 @@ use (
 	./e2e
 	./pkg
 	./services/candles
+	./services/chainwatcher
 	./services/gateway
 	./services/identity
 	./services/ledger
