@@ -27,9 +27,11 @@ import (
 	"github.com/tickless/gateway/internal/idem"
 	"github.com/tickless/gateway/internal/ratelimit"
 	"github.com/tickless/pkg/auth"
+	chainwatcherv1 "github.com/tickless/pkg/gen/tickless/chainwatcher/v1"
 	identityv1 "github.com/tickless/pkg/gen/tickless/identity/v1"
 	ledgerv1 "github.com/tickless/pkg/gen/tickless/ledger/v1"
 	ordersv1 "github.com/tickless/pkg/gen/tickless/orders/v1"
+	walletv1 "github.com/tickless/pkg/gen/tickless/wallet/v1"
 	"github.com/tickless/pkg/market"
 	"github.com/tickless/pkg/wshub"
 )
@@ -53,7 +55,10 @@ type Deps struct {
 	Identity identityv1.IdentityServiceClient
 	Ledger   ledgerv1.LedgerServiceClient
 	Orders   ordersv1.OrdersServiceClient
-	Redis    redis.UniversalClient
+	// Wallet and Chainwatcher serve deposits; nil answers those routes with 503.
+	Wallet       walletv1.WalletServiceClient
+	Chainwatcher chainwatcherv1.ChainwatcherServiceClient
+	Redis        redis.UniversalClient
 	// PublicKey fetches the Ed25519 key that verifies access tokens.
 	PublicKey      func(context.Context) (ed25519.PublicKey, error)
 	Limits         Limits
@@ -256,6 +261,8 @@ func (s *Server) Routes() http.Handler {
 			r.Use(s.authenticate, s.userRateLimit, s.idem.Middleware(s.scope, writeErr))
 			r.Get("/balances", s.balances)
 			r.Get("/ledger", s.ledgerEntries)
+			r.Get("/deposit-address", s.depositAddress)
+			r.Get("/deposits", s.listDeposits)
 			r.Get("/orders", s.listOrders)
 			r.Get("/orders/{id}", s.getOrder)
 			r.Group(func(r chi.Router) {

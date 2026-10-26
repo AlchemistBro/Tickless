@@ -137,6 +137,45 @@ paths:
                 properties:
                   balances: {type: array, items: {$ref: '#/components/schemas/Balance'}}
         '401': {$ref: '#/components/responses/Error'}
+  /v1/deposit-address:
+    get:
+      operationId: getDepositAddress
+      summary: The caller's deposit address on a chain (created on first use)
+      description: >-
+        One address per user and chain, derived from an extended public key and
+        watched before it is returned. The eth address also receives the ERC-20
+        Test USDT token. Deposits are credited after the chain's confirmation
+        threshold (regtest BTC 2, Anvil ETH 12 by default).
+      parameters:
+        - {name: chain, in: query, required: true, schema: {type: string, enum: [btc, eth]}}
+      responses:
+        '200':
+          description: Deposit address
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DepositAddress'}
+        '401': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+        '503': {$ref: '#/components/responses/Error'}
+  /v1/deposits:
+    get:
+      operationId: listDeposits
+      summary: The caller's on-chain deposits with confirmation counts, newest first
+      parameters:
+        - {name: before_id, in: query, schema: {type: string}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 200}}
+      responses:
+        '200':
+          description: Deposits
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deposits]
+                properties:
+                  deposits: {type: array, items: {$ref: '#/components/schemas/Deposit'}}
+        '401': {$ref: '#/components/responses/Error'}
+        '503': {$ref: '#/components/responses/Error'}
   /v1/ledger:
     get:
       operationId: getLedger
@@ -542,6 +581,33 @@ components:
         maker_fee_bps: {type: integer}
         taker_fee_bps: {type: integer}
         status: {type: string, enum: [active, halted]}
+    DepositAddress:
+      type: object
+      required: [chain, address, assets]
+      properties:
+        chain: {type: string, enum: [btc, eth]}
+        address: {type: string, example: bcrt1q0n0x5s8d2c3mz4a7yq9l6t5s3u2v8k6w4p2rjx}
+        assets: {type: array, items: {type: string}, example: [BTC]}
+    Deposit:
+      type: object
+      required: [id, chain, txid, index, asset, amount, address, status, block_height, confirmations, required_confirmations, detected_at]
+      properties:
+        id: {type: string}
+        chain: {type: string, enum: [btc, eth]}
+        txid: {type: string}
+        index: {type: integer, format: int64, description: 'BTC output index, ERC-20 log index, or -1 for the value of an ETH transaction'}
+        asset: {type: string}
+        amount: {type: string, example: '0.5'}
+        address: {type: string}
+        status:
+          type: string
+          enum: [pending, confirmed, reorged]
+          description: 'pending: below the threshold, not credited; confirmed: credited; reorged: its block left the chain before the threshold, never credited'
+        block_height: {type: integer, format: int64}
+        confirmations: {type: integer, format: int64}
+        required_confirmations: {type: integer, format: int64}
+        detected_at: {type: string, format: date-time}
+        confirmed_at: {type: string, format: date-time}
     Balance:
       type: object
       required: [asset, available, held]

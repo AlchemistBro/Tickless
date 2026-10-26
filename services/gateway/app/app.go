@@ -19,11 +19,13 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/tickless/gateway/internal/httpapi"
+	chainwatcherv1 "github.com/tickless/pkg/gen/tickless/chainwatcher/v1"
 	identityv1 "github.com/tickless/pkg/gen/tickless/identity/v1"
 	ledgerv1 "github.com/tickless/pkg/gen/tickless/ledger/v1"
 	matchingv1 "github.com/tickless/pkg/gen/tickless/matching/v1"
 	ordersv1 "github.com/tickless/pkg/gen/tickless/orders/v1"
 	usersv1 "github.com/tickless/pkg/gen/tickless/users/v1"
+	walletv1 "github.com/tickless/pkg/gen/tickless/wallet/v1"
 	"github.com/tickless/pkg/kafka"
 	"github.com/tickless/pkg/market"
 	"github.com/tickless/pkg/otelx"
@@ -34,6 +36,7 @@ import (
 type Config struct {
 	HTTPAddr, AdminAddr                  string
 	IdentityAddr, LedgerAddr, OrdersAddr string
+	WalletAddr, ChainwatcherAddr         string // empty disables deposits
 	RedisAddr                            string
 	KafkaBrokers                         string
 	MarketDataURL                        string
@@ -68,6 +71,7 @@ func ConfigFromEnv() Config {
 		HTTPAddr: svc.Env("HTTP_ADDR", ":8080"), AdminAddr: svc.Env("ADMIN_ADDR", ":9205"),
 		IdentityAddr: svc.Env("IDENTITY_ADDR", "localhost:9103"), LedgerAddr: svc.Env("LEDGER_ADDR", "localhost:9101"),
 		OrdersAddr: svc.Env("ORDERS_ADDR", "localhost:9102"), RedisAddr: svc.Env("REDIS_ADDR", "localhost:6379"),
+		WalletAddr: svc.Env("WALLET_ADDR", ""), ChainwatcherAddr: svc.Env("CHAINWATCHER_ADDR", ""),
 		KafkaBrokers: svc.Env("KAFKA_BROKERS", "localhost:9092"), AllowedOrigins: origins,
 		TrustProxy: svc.EnvBool("TRUST_PROXY", false), Limits: l,
 	}
@@ -99,11 +103,27 @@ func Run(ctx context.Context, cfg Config) error {
 		return err
 	}
 	defer func() { _ = ordersConn.Close() }()
+	var wallet walletv1.WalletServiceClient
+	var chainwatcher chainwatcherv1.ChainwatcherServiceClient
+	if cfg.WalletAddr != "" && cfg.ChainwatcherAddr != "" {
+		walletConn, err := svc.Dial(cfg.WalletAddr)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = walletConn.Close() }()
+		cwConn, err := svc.Dial(cfg.ChainwatcherAddr)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = cwConn.Close() }()
+		wallet, chainwatcher = walletv1.NewWalletServiceClient(walletConn), chainwatcherv1.NewChainwatcherServiceClient(cwConn)
+	}
 	identity := identityv1.NewIdentityServiceClient(idConn)
 	markets := market.NewCache(market.FetchFromOrders(ordersv1.NewOrdersServiceClient(ordersConn)))
 
 	api := httpapi.New(httpapi.Deps{
 		Identity: identity, Ledger: ledgerv1.NewLedgerServiceClient(ledgerConn), Orders: ordersv1.NewOrdersServiceClient(ordersConn),
+		Wallet: wallet, Chainwatcher: chainwatcher,
 		Redis: rdb, Limits: cfg.Limits, AllowedOrigins: cfg.AllowedOrigins, TrustProxy: cfg.TrustProxy, RequireFrozenSync: true, MarketData: cfg.MarketDataURL, WSOrigins: cfg.WSOrigins, Markets: markets,
 		PublicKey: func(ctx context.Context) (ed25519.PublicKey, error) {
 			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)

@@ -18,11 +18,47 @@ import (
 
 	"github.com/tickless/gateway/internal/httpapi"
 	"github.com/tickless/pkg/auth"
+	chainwatcherv1 "github.com/tickless/pkg/gen/tickless/chainwatcher/v1"
 	commonv1 "github.com/tickless/pkg/gen/tickless/common/v1"
 	identityv1 "github.com/tickless/pkg/gen/tickless/identity/v1"
 	ledgerv1 "github.com/tickless/pkg/gen/tickless/ledger/v1"
 	ordersv1 "github.com/tickless/pkg/gen/tickless/orders/v1"
+	walletv1 "github.com/tickless/pkg/gen/tickless/wallet/v1"
 )
+
+// fakeWallet derives a fake address per (user, chain) and records callers.
+type fakeWallet struct {
+	walletv1.WalletServiceClient
+	mu    sync.Mutex
+	users []int64
+}
+
+func (f *fakeWallet) GetDepositAddress(_ context.Context, r *walletv1.GetDepositAddressRequest, _ ...grpc.CallOption) (*walletv1.GetDepositAddressResponse, error) {
+	f.mu.Lock()
+	f.users = append(f.users, r.UserId)
+	f.mu.Unlock()
+	return &walletv1.GetDepositAddressResponse{Chain: r.Chain, Address: fmt.Sprintf("%s-addr-of-%d", r.Chain, r.UserId), DerivationIndex: uint32(r.UserId)}, nil //nolint:gosec // test ids are small
+}
+
+// fakeChainwatcher returns one pending BTC and one confirmed ETH deposit of the caller.
+type fakeChainwatcher struct {
+	chainwatcherv1.ChainwatcherServiceClient
+	mu    sync.Mutex
+	users []int64
+}
+
+func (f *fakeChainwatcher) ListDeposits(_ context.Context, r *chainwatcherv1.ListDepositsRequest, _ ...grpc.CallOption) (*chainwatcherv1.ListDepositsResponse, error) {
+	f.mu.Lock()
+	f.users = append(f.users, r.UserId)
+	f.mu.Unlock()
+	return &chainwatcherv1.ListDepositsResponse{Deposits: []*chainwatcherv1.Deposit{
+		{Id: 2, Chain: "btc", Txid: "ab", Index: 1, Asset: "BTC", Amount: &commonv1.Amount{Units: "50000000"}, Address: "bcrt1q",
+			Status: chainwatcherv1.DepositStatus_DEPOSIT_STATUS_PENDING, BlockHeight: 120, Confirmations: 1, RequiredConfirmations: 2, DetectedAtUnixNano: 1_700_000_000_000_000_000},
+		{Id: 1, Chain: "eth", Txid: "0xcd", Index: -1, Asset: "ETH", Amount: &commonv1.Amount{Units: "1500000000000000000"}, Address: "0xAb",
+			Status: chainwatcherv1.DepositStatus_DEPOSIT_STATUS_CONFIRMED, BlockHeight: 40, Confirmations: 12, RequiredConfirmations: 12,
+			DetectedAtUnixNano: 1_690_000_000_000_000_000, ConfirmedAtUnixNano: 1_690_000_100_000_000_000},
+	}}, nil
+}
 
 // fakeIdentity implements only what the gateway calls; any other method panics
 // (nil embedded interface), which makes accidental calls loud.
@@ -181,6 +217,8 @@ type testEnv struct {
 	srv      *httpapi.Server
 	identity *fakeIdentity
 	orders   *fakeOrders
+	wallet   *fakeWallet
+	cw       *fakeChainwatcher
 	redis    *miniredis.Miniredis
 	rdb      *redis.Client
 	signer   *auth.Signer
@@ -202,8 +240,9 @@ func newEnvSync(t *testing.T, limits httpapi.Limits, requireFrozenSync bool) *te
 	e.now.Store(time.Now().UnixNano())
 	e.identity = &fakeIdentity{keys: map[string]*identityv1.LookupAPIKeyResponse{}, pub: func() ed25519.PublicKey { return e.signer.PublicKey() }}
 	e.orders = &fakeOrders{}
+	e.wallet, e.cw = &fakeWallet{}, &fakeChainwatcher{}
 	e.srv = httpapi.New(httpapi.Deps{
-		Identity: e.identity, Ledger: fakeLedger{}, Orders: e.orders, Redis: rdb, Limits: limits,
+		Identity: e.identity, Ledger: fakeLedger{}, Orders: e.orders, Wallet: e.wallet, Chainwatcher: e.cw, Redis: rdb, Limits: limits,
 		AllowedOrigins: []string{"http://localhost:5173"}, RequireFrozenSync: requireFrozenSync, MarketData: "http://127.0.0.1:1",
 		PublicKey: func(context.Context) (ed25519.PublicKey, error) { return e.identity.pub(), nil },
 		Now:       func() time.Time { return time.Unix(0, e.now.Load()) },
