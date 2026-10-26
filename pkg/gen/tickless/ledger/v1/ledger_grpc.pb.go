@@ -19,11 +19,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	LedgerService_PlaceHold_FullMethodName   = "/tickless.ledger.v1.LedgerService/PlaceHold"
-	LedgerService_ReleaseHold_FullMethodName = "/tickless.ledger.v1.LedgerService/ReleaseHold"
-	LedgerService_GetBalances_FullMethodName = "/tickless.ledger.v1.LedgerService/GetBalances"
-	LedgerService_ListEntries_FullMethodName = "/tickless.ledger.v1.LedgerService/ListEntries"
-	LedgerService_AdminCredit_FullMethodName = "/tickless.ledger.v1.LedgerService/AdminCredit"
+	LedgerService_PlaceHold_FullMethodName         = "/tickless.ledger.v1.LedgerService/PlaceHold"
+	LedgerService_ReleaseHold_FullMethodName       = "/tickless.ledger.v1.LedgerService/ReleaseHold"
+	LedgerService_GetBalances_FullMethodName       = "/tickless.ledger.v1.LedgerService/GetBalances"
+	LedgerService_ListEntries_FullMethodName       = "/tickless.ledger.v1.LedgerService/ListEntries"
+	LedgerService_AdminCredit_FullMethodName       = "/tickless.ledger.v1.LedgerService/AdminCredit"
+	LedgerService_HoldWithdrawal_FullMethodName    = "/tickless.ledger.v1.LedgerService/HoldWithdrawal"
+	LedgerService_SettleWithdrawal_FullMethodName  = "/tickless.ledger.v1.LedgerService/SettleWithdrawal"
+	LedgerService_ReleaseWithdrawal_FullMethodName = "/tickless.ledger.v1.LedgerService/ReleaseWithdrawal"
 )
 
 // LedgerServiceClient is the client API for LedgerService service.
@@ -41,6 +44,16 @@ type LedgerServiceClient interface {
 	// EXTERNAL account. Idempotent by business_key. Used for deposits and, when
 	// enabled by configuration, for seeding balances in development.
 	AdminCredit(ctx context.Context, in *AdminCreditRequest, opts ...grpc.CallOption) (*AdminCreditResponse, error)
+	// HoldWithdrawal moves amount from the user's available to held balance for
+	// a withdrawal. Idempotent by withdrawal_id. FAILED_PRECONDITION when funds
+	// are insufficient.
+	HoldWithdrawal(ctx context.Context, in *HoldWithdrawalRequest, opts ...grpc.CallOption) (*HoldWithdrawalResponse, error)
+	// SettleWithdrawal moves the held amount to EXTERNAL (the funds left the
+	// exchange). Idempotent; FAILED_PRECONDITION if the hold was released.
+	SettleWithdrawal(ctx context.Context, in *SettleWithdrawalRequest, opts ...grpc.CallOption) (*SettleWithdrawalResponse, error)
+	// ReleaseWithdrawal returns the held amount to available. Idempotent;
+	// FAILED_PRECONDITION if the hold was settled.
+	ReleaseWithdrawal(ctx context.Context, in *ReleaseWithdrawalRequest, opts ...grpc.CallOption) (*ReleaseWithdrawalResponse, error)
 }
 
 type ledgerServiceClient struct {
@@ -101,6 +114,36 @@ func (c *ledgerServiceClient) AdminCredit(ctx context.Context, in *AdminCreditRe
 	return out, nil
 }
 
+func (c *ledgerServiceClient) HoldWithdrawal(ctx context.Context, in *HoldWithdrawalRequest, opts ...grpc.CallOption) (*HoldWithdrawalResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(HoldWithdrawalResponse)
+	err := c.cc.Invoke(ctx, LedgerService_HoldWithdrawal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *ledgerServiceClient) SettleWithdrawal(ctx context.Context, in *SettleWithdrawalRequest, opts ...grpc.CallOption) (*SettleWithdrawalResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SettleWithdrawalResponse)
+	err := c.cc.Invoke(ctx, LedgerService_SettleWithdrawal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *ledgerServiceClient) ReleaseWithdrawal(ctx context.Context, in *ReleaseWithdrawalRequest, opts ...grpc.CallOption) (*ReleaseWithdrawalResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReleaseWithdrawalResponse)
+	err := c.cc.Invoke(ctx, LedgerService_ReleaseWithdrawal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LedgerServiceServer is the server API for LedgerService service.
 // All implementations must embed UnimplementedLedgerServiceServer
 // for forward compatibility.
@@ -116,6 +159,16 @@ type LedgerServiceServer interface {
 	// EXTERNAL account. Idempotent by business_key. Used for deposits and, when
 	// enabled by configuration, for seeding balances in development.
 	AdminCredit(context.Context, *AdminCreditRequest) (*AdminCreditResponse, error)
+	// HoldWithdrawal moves amount from the user's available to held balance for
+	// a withdrawal. Idempotent by withdrawal_id. FAILED_PRECONDITION when funds
+	// are insufficient.
+	HoldWithdrawal(context.Context, *HoldWithdrawalRequest) (*HoldWithdrawalResponse, error)
+	// SettleWithdrawal moves the held amount to EXTERNAL (the funds left the
+	// exchange). Idempotent; FAILED_PRECONDITION if the hold was released.
+	SettleWithdrawal(context.Context, *SettleWithdrawalRequest) (*SettleWithdrawalResponse, error)
+	// ReleaseWithdrawal returns the held amount to available. Idempotent;
+	// FAILED_PRECONDITION if the hold was settled.
+	ReleaseWithdrawal(context.Context, *ReleaseWithdrawalRequest) (*ReleaseWithdrawalResponse, error)
 	mustEmbedUnimplementedLedgerServiceServer()
 }
 
@@ -140,6 +193,15 @@ func (UnimplementedLedgerServiceServer) ListEntries(context.Context, *ListEntrie
 }
 func (UnimplementedLedgerServiceServer) AdminCredit(context.Context, *AdminCreditRequest) (*AdminCreditResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AdminCredit not implemented")
+}
+func (UnimplementedLedgerServiceServer) HoldWithdrawal(context.Context, *HoldWithdrawalRequest) (*HoldWithdrawalResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method HoldWithdrawal not implemented")
+}
+func (UnimplementedLedgerServiceServer) SettleWithdrawal(context.Context, *SettleWithdrawalRequest) (*SettleWithdrawalResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SettleWithdrawal not implemented")
+}
+func (UnimplementedLedgerServiceServer) ReleaseWithdrawal(context.Context, *ReleaseWithdrawalRequest) (*ReleaseWithdrawalResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReleaseWithdrawal not implemented")
 }
 func (UnimplementedLedgerServiceServer) mustEmbedUnimplementedLedgerServiceServer() {}
 func (UnimplementedLedgerServiceServer) testEmbeddedByValue()                       {}
@@ -252,6 +314,60 @@ func _LedgerService_AdminCredit_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _LedgerService_HoldWithdrawal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HoldWithdrawalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LedgerServiceServer).HoldWithdrawal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LedgerService_HoldWithdrawal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LedgerServiceServer).HoldWithdrawal(ctx, req.(*HoldWithdrawalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LedgerService_SettleWithdrawal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SettleWithdrawalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LedgerServiceServer).SettleWithdrawal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LedgerService_SettleWithdrawal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LedgerServiceServer).SettleWithdrawal(ctx, req.(*SettleWithdrawalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LedgerService_ReleaseWithdrawal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReleaseWithdrawalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LedgerServiceServer).ReleaseWithdrawal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LedgerService_ReleaseWithdrawal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LedgerServiceServer).ReleaseWithdrawal(ctx, req.(*ReleaseWithdrawalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // LedgerService_ServiceDesc is the grpc.ServiceDesc for LedgerService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -278,6 +394,18 @@ var LedgerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AdminCredit",
 			Handler:    _LedgerService_AdminCredit_Handler,
+		},
+		{
+			MethodName: "HoldWithdrawal",
+			Handler:    _LedgerService_HoldWithdrawal_Handler,
+		},
+		{
+			MethodName: "SettleWithdrawal",
+			Handler:    _LedgerService_SettleWithdrawal_Handler,
+		},
+		{
+			MethodName: "ReleaseWithdrawal",
+			Handler:    _LedgerService_ReleaseWithdrawal_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

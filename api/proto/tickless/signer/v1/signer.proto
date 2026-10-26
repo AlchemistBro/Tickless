@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package tickless.signer.v1;
+
+import "tickless/common/v1/common.proto";
+
+// SignerService holds the hot-wallet keys. It is reachable only over mTLS and
+// only by the withdrawals service (client certificate CN "withdrawals").
+service SignerService {
+  // SignWithdrawal builds and signs the transaction paying a withdrawal from
+  // the hot wallet. Idempotent by withdrawal_id: a retry returns the same
+  // signed transaction, never a second payment.
+  rpc SignWithdrawal(SignWithdrawalRequest) returns (SignWithdrawalResponse);
+  // HotWallet returns the hot-wallet address of a chain (public).
+  rpc HotWallet(HotWalletRequest) returns (HotWalletResponse);
+}
+
+message SignWithdrawalRequest {
+  int64 withdrawal_id = 1;
+  // "btc" or "eth".
+  string chain = 2;
+  // "BTC", "ETH" or "USDT".
+  string asset = 3;
+  tickless.common.v1.Amount amount = 4;
+  string destination = 5;
+}
+
+message SignWithdrawalResponse {
+  string txid = 1;
+  bytes raw_tx = 2;
+  // Network fee paid by the hot wallet, in the chain's native asset.
+  tickless.common.v1.Amount network_fee = 3;
+  string fee_asset = 4;
+}
+
+message HotWalletRequest {
+  string chain = 1;
+}
+
+message HotWalletResponse {
+  string address = 1;
+}

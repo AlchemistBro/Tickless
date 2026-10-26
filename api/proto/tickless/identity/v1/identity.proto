@@ -20,6 +20,15 @@ service IdentityService {
   // ListFrozen returns the ids of all frozen users; the gateway rebuilds its
   // frozen-user set from it at start.
   rpc ListFrozen(ListFrozenRequest) returns (ListFrozenResponse);
+  // TOTP two-factor authentication (RFC 6238). Enrol returns the secret once;
+  // Confirm activates it with a first code; Verify checks a code for a
+  // sensitive action and accepts each code once.
+  rpc EnrollTOTP(EnrollTOTPRequest) returns (EnrollTOTPResponse);
+  rpc ConfirmTOTP(ConfirmTOTPRequest) returns (ConfirmTOTPResponse);
+  rpc VerifyTOTP(VerifyTOTPRequest) returns (VerifyTOTPResponse);
+  // GetUser returns contact data and settings (internal: notifier, withdrawals).
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc SetNotificationPrefs(SetNotificationPrefsRequest) returns (SetNotificationPrefsResponse);
 }
 
 message SignupRequest {
@@ -149,3 +158,50 @@ message ListFrozenRequest {}
 message ListFrozenResponse {
   repeated int64 user_ids = 1;
 }
+
+message EnrollTOTPRequest {
+  int64 user_id = 1;
+}
+
+message EnrollTOTPResponse {
+  // Base32 secret for the authenticator app (shown once).
+  string secret = 1;
+  // otpauth:// URI for QR codes.
+  string otpauth_uri = 2;
+}
+
+message ConfirmTOTPRequest {
+  int64 user_id = 1;
+  string code = 2;
+}
+
+message ConfirmTOTPResponse {}
+
+message VerifyTOTPRequest {
+  int64 user_id = 1;
+  string code = 2;
+}
+
+message VerifyTOTPResponse {}
+
+message GetUserRequest {
+  int64 user_id = 1;
+}
+
+message GetUserResponse {
+  int64 user_id = 1;
+  string email = 2;
+  string role = 3;
+  bool frozen = 4;
+  bool email_verified = 5;
+  bool totp_enabled = 6;
+  // Opt-in "order filled" emails.
+  bool notify_order_fills = 7;
+}
+
+message SetNotificationPrefsRequest {
+  int64 user_id = 1;
+  bool notify_order_fills = 2;
+}
+
+message SetNotificationPrefsResponse {}

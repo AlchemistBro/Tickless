@@ -19,19 +19,24 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	IdentityService_Signup_FullMethodName        = "/tickless.identity.v1.IdentityService/Signup"
-	IdentityService_VerifyEmail_FullMethodName   = "/tickless.identity.v1.IdentityService/VerifyEmail"
-	IdentityService_Login_FullMethodName         = "/tickless.identity.v1.IdentityService/Login"
-	IdentityService_Refresh_FullMethodName       = "/tickless.identity.v1.IdentityService/Refresh"
-	IdentityService_Logout_FullMethodName        = "/tickless.identity.v1.IdentityService/Logout"
-	IdentityService_CreateAPIKey_FullMethodName  = "/tickless.identity.v1.IdentityService/CreateAPIKey"
-	IdentityService_ListAPIKeys_FullMethodName   = "/tickless.identity.v1.IdentityService/ListAPIKeys"
-	IdentityService_RevokeAPIKey_FullMethodName  = "/tickless.identity.v1.IdentityService/RevokeAPIKey"
-	IdentityService_LookupAPIKey_FullMethodName  = "/tickless.identity.v1.IdentityService/LookupAPIKey"
-	IdentityService_GetPublicKey_FullMethodName  = "/tickless.identity.v1.IdentityService/GetPublicKey"
-	IdentityService_SetUserFrozen_FullMethodName = "/tickless.identity.v1.IdentityService/SetUserFrozen"
-	IdentityService_ListUsers_FullMethodName     = "/tickless.identity.v1.IdentityService/ListUsers"
-	IdentityService_ListFrozen_FullMethodName    = "/tickless.identity.v1.IdentityService/ListFrozen"
+	IdentityService_Signup_FullMethodName               = "/tickless.identity.v1.IdentityService/Signup"
+	IdentityService_VerifyEmail_FullMethodName          = "/tickless.identity.v1.IdentityService/VerifyEmail"
+	IdentityService_Login_FullMethodName                = "/tickless.identity.v1.IdentityService/Login"
+	IdentityService_Refresh_FullMethodName              = "/tickless.identity.v1.IdentityService/Refresh"
+	IdentityService_Logout_FullMethodName               = "/tickless.identity.v1.IdentityService/Logout"
+	IdentityService_CreateAPIKey_FullMethodName         = "/tickless.identity.v1.IdentityService/CreateAPIKey"
+	IdentityService_ListAPIKeys_FullMethodName          = "/tickless.identity.v1.IdentityService/ListAPIKeys"
+	IdentityService_RevokeAPIKey_FullMethodName         = "/tickless.identity.v1.IdentityService/RevokeAPIKey"
+	IdentityService_LookupAPIKey_FullMethodName         = "/tickless.identity.v1.IdentityService/LookupAPIKey"
+	IdentityService_GetPublicKey_FullMethodName         = "/tickless.identity.v1.IdentityService/GetPublicKey"
+	IdentityService_SetUserFrozen_FullMethodName        = "/tickless.identity.v1.IdentityService/SetUserFrozen"
+	IdentityService_ListUsers_FullMethodName            = "/tickless.identity.v1.IdentityService/ListUsers"
+	IdentityService_ListFrozen_FullMethodName           = "/tickless.identity.v1.IdentityService/ListFrozen"
+	IdentityService_EnrollTOTP_FullMethodName           = "/tickless.identity.v1.IdentityService/EnrollTOTP"
+	IdentityService_ConfirmTOTP_FullMethodName          = "/tickless.identity.v1.IdentityService/ConfirmTOTP"
+	IdentityService_VerifyTOTP_FullMethodName           = "/tickless.identity.v1.IdentityService/VerifyTOTP"
+	IdentityService_GetUser_FullMethodName              = "/tickless.identity.v1.IdentityService/GetUser"
+	IdentityService_SetNotificationPrefs_FullMethodName = "/tickless.identity.v1.IdentityService/SetNotificationPrefs"
 )
 
 // IdentityServiceClient is the client API for IdentityService service.
@@ -55,6 +60,15 @@ type IdentityServiceClient interface {
 	// ListFrozen returns the ids of all frozen users; the gateway rebuilds its
 	// frozen-user set from it at start.
 	ListFrozen(ctx context.Context, in *ListFrozenRequest, opts ...grpc.CallOption) (*ListFrozenResponse, error)
+	// TOTP two-factor authentication (RFC 6238). Enrol returns the secret once;
+	// Confirm activates it with a first code; Verify checks a code for a
+	// sensitive action and accepts each code once.
+	EnrollTOTP(ctx context.Context, in *EnrollTOTPRequest, opts ...grpc.CallOption) (*EnrollTOTPResponse, error)
+	ConfirmTOTP(ctx context.Context, in *ConfirmTOTPRequest, opts ...grpc.CallOption) (*ConfirmTOTPResponse, error)
+	VerifyTOTP(ctx context.Context, in *VerifyTOTPRequest, opts ...grpc.CallOption) (*VerifyTOTPResponse, error)
+	// GetUser returns contact data and settings (internal: notifier, withdrawals).
+	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
+	SetNotificationPrefs(ctx context.Context, in *SetNotificationPrefsRequest, opts ...grpc.CallOption) (*SetNotificationPrefsResponse, error)
 }
 
 type identityServiceClient struct {
@@ -195,6 +209,56 @@ func (c *identityServiceClient) ListFrozen(ctx context.Context, in *ListFrozenRe
 	return out, nil
 }
 
+func (c *identityServiceClient) EnrollTOTP(ctx context.Context, in *EnrollTOTPRequest, opts ...grpc.CallOption) (*EnrollTOTPResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EnrollTOTPResponse)
+	err := c.cc.Invoke(ctx, IdentityService_EnrollTOTP_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityServiceClient) ConfirmTOTP(ctx context.Context, in *ConfirmTOTPRequest, opts ...grpc.CallOption) (*ConfirmTOTPResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConfirmTOTPResponse)
+	err := c.cc.Invoke(ctx, IdentityService_ConfirmTOTP_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityServiceClient) VerifyTOTP(ctx context.Context, in *VerifyTOTPRequest, opts ...grpc.CallOption) (*VerifyTOTPResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VerifyTOTPResponse)
+	err := c.cc.Invoke(ctx, IdentityService_VerifyTOTP_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityServiceClient) GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUserResponse)
+	err := c.cc.Invoke(ctx, IdentityService_GetUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityServiceClient) SetNotificationPrefs(ctx context.Context, in *SetNotificationPrefsRequest, opts ...grpc.CallOption) (*SetNotificationPrefsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetNotificationPrefsResponse)
+	err := c.cc.Invoke(ctx, IdentityService_SetNotificationPrefs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IdentityServiceServer is the server API for IdentityService service.
 // All implementations must embed UnimplementedIdentityServiceServer
 // for forward compatibility.
@@ -216,6 +280,15 @@ type IdentityServiceServer interface {
 	// ListFrozen returns the ids of all frozen users; the gateway rebuilds its
 	// frozen-user set from it at start.
 	ListFrozen(context.Context, *ListFrozenRequest) (*ListFrozenResponse, error)
+	// TOTP two-factor authentication (RFC 6238). Enrol returns the secret once;
+	// Confirm activates it with a first code; Verify checks a code for a
+	// sensitive action and accepts each code once.
+	EnrollTOTP(context.Context, *EnrollTOTPRequest) (*EnrollTOTPResponse, error)
+	ConfirmTOTP(context.Context, *ConfirmTOTPRequest) (*ConfirmTOTPResponse, error)
+	VerifyTOTP(context.Context, *VerifyTOTPRequest) (*VerifyTOTPResponse, error)
+	// GetUser returns contact data and settings (internal: notifier, withdrawals).
+	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
+	SetNotificationPrefs(context.Context, *SetNotificationPrefsRequest) (*SetNotificationPrefsResponse, error)
 	mustEmbedUnimplementedIdentityServiceServer()
 }
 
@@ -264,6 +337,21 @@ func (UnimplementedIdentityServiceServer) ListUsers(context.Context, *ListUsersR
 }
 func (UnimplementedIdentityServiceServer) ListFrozen(context.Context, *ListFrozenRequest) (*ListFrozenResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListFrozen not implemented")
+}
+func (UnimplementedIdentityServiceServer) EnrollTOTP(context.Context, *EnrollTOTPRequest) (*EnrollTOTPResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method EnrollTOTP not implemented")
+}
+func (UnimplementedIdentityServiceServer) ConfirmTOTP(context.Context, *ConfirmTOTPRequest) (*ConfirmTOTPResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ConfirmTOTP not implemented")
+}
+func (UnimplementedIdentityServiceServer) VerifyTOTP(context.Context, *VerifyTOTPRequest) (*VerifyTOTPResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method VerifyTOTP not implemented")
+}
+func (UnimplementedIdentityServiceServer) GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetUser not implemented")
+}
+func (UnimplementedIdentityServiceServer) SetNotificationPrefs(context.Context, *SetNotificationPrefsRequest) (*SetNotificationPrefsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetNotificationPrefs not implemented")
 }
 func (UnimplementedIdentityServiceServer) mustEmbedUnimplementedIdentityServiceServer() {}
 func (UnimplementedIdentityServiceServer) testEmbeddedByValue()                         {}
@@ -520,6 +608,96 @@ func _IdentityService_ListFrozen_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _IdentityService_EnrollTOTP_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EnrollTOTPRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServiceServer).EnrollTOTP(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IdentityService_EnrollTOTP_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServiceServer).EnrollTOTP(ctx, req.(*EnrollTOTPRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _IdentityService_ConfirmTOTP_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConfirmTOTPRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServiceServer).ConfirmTOTP(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IdentityService_ConfirmTOTP_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServiceServer).ConfirmTOTP(ctx, req.(*ConfirmTOTPRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _IdentityService_VerifyTOTP_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifyTOTPRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServiceServer).VerifyTOTP(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IdentityService_VerifyTOTP_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServiceServer).VerifyTOTP(ctx, req.(*VerifyTOTPRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _IdentityService_GetUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServiceServer).GetUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IdentityService_GetUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServiceServer).GetUser(ctx, req.(*GetUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _IdentityService_SetNotificationPrefs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetNotificationPrefsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServiceServer).SetNotificationPrefs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IdentityService_SetNotificationPrefs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServiceServer).SetNotificationPrefs(ctx, req.(*SetNotificationPrefsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // IdentityService_ServiceDesc is the grpc.ServiceDesc for IdentityService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -578,6 +756,26 @@ var IdentityService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListFrozen",
 			Handler:    _IdentityService_ListFrozen_Handler,
+		},
+		{
+			MethodName: "EnrollTOTP",
+			Handler:    _IdentityService_EnrollTOTP_Handler,
+		},
+		{
+			MethodName: "ConfirmTOTP",
+			Handler:    _IdentityService_ConfirmTOTP_Handler,
+		},
+		{
+			MethodName: "VerifyTOTP",
+			Handler:    _IdentityService_VerifyTOTP_Handler,
+		},
+		{
+			MethodName: "GetUser",
+			Handler:    _IdentityService_GetUser_Handler,
+		},
+		{
+			MethodName: "SetNotificationPrefs",
+			Handler:    _IdentityService_SetNotificationPrefs_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

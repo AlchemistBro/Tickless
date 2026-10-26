@@ -834,6 +834,295 @@ func (x *BalanceChanged) GetReason() string {
 	return ""
 }
 
+type HoldWithdrawalRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WithdrawalId  int64                  `protobuf:"varint,1,opt,name=withdrawal_id,json=withdrawalId,proto3" json:"withdrawal_id,omitempty"`
+	UserId        int64                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Asset         string                 `protobuf:"bytes,3,opt,name=asset,proto3" json:"asset,omitempty"`
+	Amount        *v1.Amount             `protobuf:"bytes,4,opt,name=amount,proto3" json:"amount,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HoldWithdrawalRequest) Reset() {
+	*x = HoldWithdrawalRequest{}
+	mi := &file_tickless_ledger_v1_ledger_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HoldWithdrawalRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HoldWithdrawalRequest) ProtoMessage() {}
+
+func (x *HoldWithdrawalRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_ledger_v1_ledger_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HoldWithdrawalRequest.ProtoReflect.Descriptor instead.
+func (*HoldWithdrawalRequest) Descriptor() ([]byte, []int) {
+	return file_tickless_ledger_v1_ledger_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *HoldWithdrawalRequest) GetWithdrawalId() int64 {
+	if x != nil {
+		return x.WithdrawalId
+	}
+	return 0
+}
+
+func (x *HoldWithdrawalRequest) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *HoldWithdrawalRequest) GetAsset() string {
+	if x != nil {
+		return x.Asset
+	}
+	return ""
+}
+
+func (x *HoldWithdrawalRequest) GetAmount() *v1.Amount {
+	if x != nil {
+		return x.Amount
+	}
+	return nil
+}
+
+type HoldWithdrawalResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// True when the hold already existed (idempotent replay).
+	AlreadyApplied bool `protobuf:"varint,1,opt,name=already_applied,json=alreadyApplied,proto3" json:"already_applied,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *HoldWithdrawalResponse) Reset() {
+	*x = HoldWithdrawalResponse{}
+	mi := &file_tickless_ledger_v1_ledger_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HoldWithdrawalResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HoldWithdrawalResponse) ProtoMessage() {}
+
+func (x *HoldWithdrawalResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_ledger_v1_ledger_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HoldWithdrawalResponse.ProtoReflect.Descriptor instead.
+func (*HoldWithdrawalResponse) Descriptor() ([]byte, []int) {
+	return file_tickless_ledger_v1_ledger_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *HoldWithdrawalResponse) GetAlreadyApplied() bool {
+	if x != nil {
+		return x.AlreadyApplied
+	}
+	return false
+}
+
+type SettleWithdrawalRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WithdrawalId  int64                  `protobuf:"varint,1,opt,name=withdrawal_id,json=withdrawalId,proto3" json:"withdrawal_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SettleWithdrawalRequest) Reset() {
+	*x = SettleWithdrawalRequest{}
+	mi := &file_tickless_ledger_v1_ledger_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SettleWithdrawalRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SettleWithdrawalRequest) ProtoMessage() {}
+
+func (x *SettleWithdrawalRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_ledger_v1_ledger_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SettleWithdrawalRequest.ProtoReflect.Descriptor instead.
+func (*SettleWithdrawalRequest) Descriptor() ([]byte, []int) {
+	return file_tickless_ledger_v1_ledger_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *SettleWithdrawalRequest) GetWithdrawalId() int64 {
+	if x != nil {
+		return x.WithdrawalId
+	}
+	return 0
+}
+
+type SettleWithdrawalResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	AlreadyApplied bool                   `protobuf:"varint,1,opt,name=already_applied,json=alreadyApplied,proto3" json:"already_applied,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SettleWithdrawalResponse) Reset() {
+	*x = SettleWithdrawalResponse{}
+	mi := &file_tickless_ledger_v1_ledger_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SettleWithdrawalResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SettleWithdrawalResponse) ProtoMessage() {}
+
+func (x *SettleWithdrawalResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_ledger_v1_ledger_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SettleWithdrawalResponse.ProtoReflect.Descriptor instead.
+func (*SettleWithdrawalResponse) Descriptor() ([]byte, []int) {
+	return file_tickless_ledger_v1_ledger_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *SettleWithdrawalResponse) GetAlreadyApplied() bool {
+	if x != nil {
+		return x.AlreadyApplied
+	}
+	return false
+}
+
+type ReleaseWithdrawalRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WithdrawalId  int64                  `protobuf:"varint,1,opt,name=withdrawal_id,json=withdrawalId,proto3" json:"withdrawal_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReleaseWithdrawalRequest) Reset() {
+	*x = ReleaseWithdrawalRequest{}
+	mi := &file_tickless_ledger_v1_ledger_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReleaseWithdrawalRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReleaseWithdrawalRequest) ProtoMessage() {}
+
+func (x *ReleaseWithdrawalRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_ledger_v1_ledger_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReleaseWithdrawalRequest.ProtoReflect.Descriptor instead.
+func (*ReleaseWithdrawalRequest) Descriptor() ([]byte, []int) {
+	return file_tickless_ledger_v1_ledger_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ReleaseWithdrawalRequest) GetWithdrawalId() int64 {
+	if x != nil {
+		return x.WithdrawalId
+	}
+	return 0
+}
+
+type ReleaseWithdrawalResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	AlreadyApplied bool                   `protobuf:"varint,1,opt,name=already_applied,json=alreadyApplied,proto3" json:"already_applied,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ReleaseWithdrawalResponse) Reset() {
+	*x = ReleaseWithdrawalResponse{}
+	mi := &file_tickless_ledger_v1_ledger_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReleaseWithdrawalResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReleaseWithdrawalResponse) ProtoMessage() {}
+
+func (x *ReleaseWithdrawalResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_ledger_v1_ledger_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReleaseWithdrawalResponse.ProtoReflect.Descriptor instead.
+func (*ReleaseWithdrawalResponse) Descriptor() ([]byte, []int) {
+	return file_tickless_ledger_v1_ledger_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ReleaseWithdrawalResponse) GetAlreadyApplied() bool {
+	if x != nil {
+		return x.AlreadyApplied
+	}
+	return false
+}
+
 var File_tickless_ledger_v1_ledger_proto protoreflect.FileDescriptor
 
 const file_tickless_ledger_v1_ledger_proto_rawDesc = "" +
@@ -890,13 +1179,31 @@ const file_tickless_ledger_v1_ledger_proto_rawDesc = "" +
 	"\tavailable\x18\x04 \x01(\v2\x1a.tickless.common.v1.AmountR\tavailable\x12.\n" +
 	"\x04held\x18\x05 \x01(\v2\x1a.tickless.common.v1.AmountR\x04held\x12\x19\n" +
 	"\bentry_id\x18\x06 \x01(\x03R\aentryId\x12\x16\n" +
-	"\x06reason\x18\a \x01(\tR\x06reason2\xe9\x03\n" +
+	"\x06reason\x18\a \x01(\tR\x06reason\"\x9f\x01\n" +
+	"\x15HoldWithdrawalRequest\x12#\n" +
+	"\rwithdrawal_id\x18\x01 \x01(\x03R\fwithdrawalId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\x03R\x06userId\x12\x14\n" +
+	"\x05asset\x18\x03 \x01(\tR\x05asset\x122\n" +
+	"\x06amount\x18\x04 \x01(\v2\x1a.tickless.common.v1.AmountR\x06amount\"A\n" +
+	"\x16HoldWithdrawalResponse\x12'\n" +
+	"\x0falready_applied\x18\x01 \x01(\bR\x0ealreadyApplied\">\n" +
+	"\x17SettleWithdrawalRequest\x12#\n" +
+	"\rwithdrawal_id\x18\x01 \x01(\x03R\fwithdrawalId\"C\n" +
+	"\x18SettleWithdrawalResponse\x12'\n" +
+	"\x0falready_applied\x18\x01 \x01(\bR\x0ealreadyApplied\"?\n" +
+	"\x18ReleaseWithdrawalRequest\x12#\n" +
+	"\rwithdrawal_id\x18\x01 \x01(\x03R\fwithdrawalId\"D\n" +
+	"\x19ReleaseWithdrawalResponse\x12'\n" +
+	"\x0falready_applied\x18\x01 \x01(\bR\x0ealreadyApplied2\xb3\x06\n" +
 	"\rLedgerService\x12X\n" +
 	"\tPlaceHold\x12$.tickless.ledger.v1.PlaceHoldRequest\x1a%.tickless.ledger.v1.PlaceHoldResponse\x12^\n" +
 	"\vReleaseHold\x12&.tickless.ledger.v1.ReleaseHoldRequest\x1a'.tickless.ledger.v1.ReleaseHoldResponse\x12^\n" +
 	"\vGetBalances\x12&.tickless.ledger.v1.GetBalancesRequest\x1a'.tickless.ledger.v1.GetBalancesResponse\x12^\n" +
 	"\vListEntries\x12&.tickless.ledger.v1.ListEntriesRequest\x1a'.tickless.ledger.v1.ListEntriesResponse\x12^\n" +
-	"\vAdminCredit\x12&.tickless.ledger.v1.AdminCreditRequest\x1a'.tickless.ledger.v1.AdminCreditResponseB\xc8\x01\n" +
+	"\vAdminCredit\x12&.tickless.ledger.v1.AdminCreditRequest\x1a'.tickless.ledger.v1.AdminCreditResponse\x12g\n" +
+	"\x0eHoldWithdrawal\x12).tickless.ledger.v1.HoldWithdrawalRequest\x1a*.tickless.ledger.v1.HoldWithdrawalResponse\x12m\n" +
+	"\x10SettleWithdrawal\x12+.tickless.ledger.v1.SettleWithdrawalRequest\x1a,.tickless.ledger.v1.SettleWithdrawalResponse\x12p\n" +
+	"\x11ReleaseWithdrawal\x12,.tickless.ledger.v1.ReleaseWithdrawalRequest\x1a-.tickless.ledger.v1.ReleaseWithdrawalResponseB\xc8\x01\n" +
 	"\x16com.tickless.ledger.v1B\vLedgerProtoP\x01Z7github.com/tickless/pkg/gen/tickless/ledger/v1;ledgerv1\xa2\x02\x03TLX\xaa\x02\x12Tickless.Ledger.V1\xca\x02\x12Tickless\\Ledger\\V1\xe2\x02\x1eTickless\\Ledger\\V1\\GPBMetadata\xea\x02\x14Tickless::Ledger::V1b\x06proto3"
 
 var (
@@ -911,53 +1218,66 @@ func file_tickless_ledger_v1_ledger_proto_rawDescGZIP() []byte {
 	return file_tickless_ledger_v1_ledger_proto_rawDescData
 }
 
-var file_tickless_ledger_v1_ledger_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_tickless_ledger_v1_ledger_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_tickless_ledger_v1_ledger_proto_goTypes = []any{
-	(*PlaceHoldRequest)(nil),    // 0: tickless.ledger.v1.PlaceHoldRequest
-	(*PlaceHoldResponse)(nil),   // 1: tickless.ledger.v1.PlaceHoldResponse
-	(*ReleaseHoldRequest)(nil),  // 2: tickless.ledger.v1.ReleaseHoldRequest
-	(*ReleaseHoldResponse)(nil), // 3: tickless.ledger.v1.ReleaseHoldResponse
-	(*GetBalancesRequest)(nil),  // 4: tickless.ledger.v1.GetBalancesRequest
-	(*Balance)(nil),             // 5: tickless.ledger.v1.Balance
-	(*GetBalancesResponse)(nil), // 6: tickless.ledger.v1.GetBalancesResponse
-	(*ListEntriesRequest)(nil),  // 7: tickless.ledger.v1.ListEntriesRequest
-	(*Posting)(nil),             // 8: tickless.ledger.v1.Posting
-	(*Entry)(nil),               // 9: tickless.ledger.v1.Entry
-	(*ListEntriesResponse)(nil), // 10: tickless.ledger.v1.ListEntriesResponse
-	(*AdminCreditRequest)(nil),  // 11: tickless.ledger.v1.AdminCreditRequest
-	(*AdminCreditResponse)(nil), // 12: tickless.ledger.v1.AdminCreditResponse
-	(*BalanceChanged)(nil),      // 13: tickless.ledger.v1.BalanceChanged
-	(*v1.Amount)(nil),           // 14: tickless.common.v1.Amount
-	(*v1.EventMeta)(nil),        // 15: tickless.common.v1.EventMeta
+	(*PlaceHoldRequest)(nil),          // 0: tickless.ledger.v1.PlaceHoldRequest
+	(*PlaceHoldResponse)(nil),         // 1: tickless.ledger.v1.PlaceHoldResponse
+	(*ReleaseHoldRequest)(nil),        // 2: tickless.ledger.v1.ReleaseHoldRequest
+	(*ReleaseHoldResponse)(nil),       // 3: tickless.ledger.v1.ReleaseHoldResponse
+	(*GetBalancesRequest)(nil),        // 4: tickless.ledger.v1.GetBalancesRequest
+	(*Balance)(nil),                   // 5: tickless.ledger.v1.Balance
+	(*GetBalancesResponse)(nil),       // 6: tickless.ledger.v1.GetBalancesResponse
+	(*ListEntriesRequest)(nil),        // 7: tickless.ledger.v1.ListEntriesRequest
+	(*Posting)(nil),                   // 8: tickless.ledger.v1.Posting
+	(*Entry)(nil),                     // 9: tickless.ledger.v1.Entry
+	(*ListEntriesResponse)(nil),       // 10: tickless.ledger.v1.ListEntriesResponse
+	(*AdminCreditRequest)(nil),        // 11: tickless.ledger.v1.AdminCreditRequest
+	(*AdminCreditResponse)(nil),       // 12: tickless.ledger.v1.AdminCreditResponse
+	(*BalanceChanged)(nil),            // 13: tickless.ledger.v1.BalanceChanged
+	(*HoldWithdrawalRequest)(nil),     // 14: tickless.ledger.v1.HoldWithdrawalRequest
+	(*HoldWithdrawalResponse)(nil),    // 15: tickless.ledger.v1.HoldWithdrawalResponse
+	(*SettleWithdrawalRequest)(nil),   // 16: tickless.ledger.v1.SettleWithdrawalRequest
+	(*SettleWithdrawalResponse)(nil),  // 17: tickless.ledger.v1.SettleWithdrawalResponse
+	(*ReleaseWithdrawalRequest)(nil),  // 18: tickless.ledger.v1.ReleaseWithdrawalRequest
+	(*ReleaseWithdrawalResponse)(nil), // 19: tickless.ledger.v1.ReleaseWithdrawalResponse
+	(*v1.Amount)(nil),                 // 20: tickless.common.v1.Amount
+	(*v1.EventMeta)(nil),              // 21: tickless.common.v1.EventMeta
 }
 var file_tickless_ledger_v1_ledger_proto_depIdxs = []int32{
-	14, // 0: tickless.ledger.v1.PlaceHoldRequest.amount:type_name -> tickless.common.v1.Amount
-	14, // 1: tickless.ledger.v1.ReleaseHoldResponse.released:type_name -> tickless.common.v1.Amount
-	14, // 2: tickless.ledger.v1.Balance.available:type_name -> tickless.common.v1.Amount
-	14, // 3: tickless.ledger.v1.Balance.held:type_name -> tickless.common.v1.Amount
+	20, // 0: tickless.ledger.v1.PlaceHoldRequest.amount:type_name -> tickless.common.v1.Amount
+	20, // 1: tickless.ledger.v1.ReleaseHoldResponse.released:type_name -> tickless.common.v1.Amount
+	20, // 2: tickless.ledger.v1.Balance.available:type_name -> tickless.common.v1.Amount
+	20, // 3: tickless.ledger.v1.Balance.held:type_name -> tickless.common.v1.Amount
 	5,  // 4: tickless.ledger.v1.GetBalancesResponse.balances:type_name -> tickless.ledger.v1.Balance
-	14, // 5: tickless.ledger.v1.Posting.amount:type_name -> tickless.common.v1.Amount
+	20, // 5: tickless.ledger.v1.Posting.amount:type_name -> tickless.common.v1.Amount
 	8,  // 6: tickless.ledger.v1.Entry.postings:type_name -> tickless.ledger.v1.Posting
 	9,  // 7: tickless.ledger.v1.ListEntriesResponse.entries:type_name -> tickless.ledger.v1.Entry
-	14, // 8: tickless.ledger.v1.AdminCreditRequest.amount:type_name -> tickless.common.v1.Amount
-	15, // 9: tickless.ledger.v1.BalanceChanged.meta:type_name -> tickless.common.v1.EventMeta
-	14, // 10: tickless.ledger.v1.BalanceChanged.available:type_name -> tickless.common.v1.Amount
-	14, // 11: tickless.ledger.v1.BalanceChanged.held:type_name -> tickless.common.v1.Amount
-	0,  // 12: tickless.ledger.v1.LedgerService.PlaceHold:input_type -> tickless.ledger.v1.PlaceHoldRequest
-	2,  // 13: tickless.ledger.v1.LedgerService.ReleaseHold:input_type -> tickless.ledger.v1.ReleaseHoldRequest
-	4,  // 14: tickless.ledger.v1.LedgerService.GetBalances:input_type -> tickless.ledger.v1.GetBalancesRequest
-	7,  // 15: tickless.ledger.v1.LedgerService.ListEntries:input_type -> tickless.ledger.v1.ListEntriesRequest
-	11, // 16: tickless.ledger.v1.LedgerService.AdminCredit:input_type -> tickless.ledger.v1.AdminCreditRequest
-	1,  // 17: tickless.ledger.v1.LedgerService.PlaceHold:output_type -> tickless.ledger.v1.PlaceHoldResponse
-	3,  // 18: tickless.ledger.v1.LedgerService.ReleaseHold:output_type -> tickless.ledger.v1.ReleaseHoldResponse
-	6,  // 19: tickless.ledger.v1.LedgerService.GetBalances:output_type -> tickless.ledger.v1.GetBalancesResponse
-	10, // 20: tickless.ledger.v1.LedgerService.ListEntries:output_type -> tickless.ledger.v1.ListEntriesResponse
-	12, // 21: tickless.ledger.v1.LedgerService.AdminCredit:output_type -> tickless.ledger.v1.AdminCreditResponse
-	17, // [17:22] is the sub-list for method output_type
-	12, // [12:17] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	20, // 8: tickless.ledger.v1.AdminCreditRequest.amount:type_name -> tickless.common.v1.Amount
+	21, // 9: tickless.ledger.v1.BalanceChanged.meta:type_name -> tickless.common.v1.EventMeta
+	20, // 10: tickless.ledger.v1.BalanceChanged.available:type_name -> tickless.common.v1.Amount
+	20, // 11: tickless.ledger.v1.BalanceChanged.held:type_name -> tickless.common.v1.Amount
+	20, // 12: tickless.ledger.v1.HoldWithdrawalRequest.amount:type_name -> tickless.common.v1.Amount
+	0,  // 13: tickless.ledger.v1.LedgerService.PlaceHold:input_type -> tickless.ledger.v1.PlaceHoldRequest
+	2,  // 14: tickless.ledger.v1.LedgerService.ReleaseHold:input_type -> tickless.ledger.v1.ReleaseHoldRequest
+	4,  // 15: tickless.ledger.v1.LedgerService.GetBalances:input_type -> tickless.ledger.v1.GetBalancesRequest
+	7,  // 16: tickless.ledger.v1.LedgerService.ListEntries:input_type -> tickless.ledger.v1.ListEntriesRequest
+	11, // 17: tickless.ledger.v1.LedgerService.AdminCredit:input_type -> tickless.ledger.v1.AdminCreditRequest
+	14, // 18: tickless.ledger.v1.LedgerService.HoldWithdrawal:input_type -> tickless.ledger.v1.HoldWithdrawalRequest
+	16, // 19: tickless.ledger.v1.LedgerService.SettleWithdrawal:input_type -> tickless.ledger.v1.SettleWithdrawalRequest
+	18, // 20: tickless.ledger.v1.LedgerService.ReleaseWithdrawal:input_type -> tickless.ledger.v1.ReleaseWithdrawalRequest
+	1,  // 21: tickless.ledger.v1.LedgerService.PlaceHold:output_type -> tickless.ledger.v1.PlaceHoldResponse
+	3,  // 22: tickless.ledger.v1.LedgerService.ReleaseHold:output_type -> tickless.ledger.v1.ReleaseHoldResponse
+	6,  // 23: tickless.ledger.v1.LedgerService.GetBalances:output_type -> tickless.ledger.v1.GetBalancesResponse
+	10, // 24: tickless.ledger.v1.LedgerService.ListEntries:output_type -> tickless.ledger.v1.ListEntriesResponse
+	12, // 25: tickless.ledger.v1.LedgerService.AdminCredit:output_type -> tickless.ledger.v1.AdminCreditResponse
+	15, // 26: tickless.ledger.v1.LedgerService.HoldWithdrawal:output_type -> tickless.ledger.v1.HoldWithdrawalResponse
+	17, // 27: tickless.ledger.v1.LedgerService.SettleWithdrawal:output_type -> tickless.ledger.v1.SettleWithdrawalResponse
+	19, // 28: tickless.ledger.v1.LedgerService.ReleaseWithdrawal:output_type -> tickless.ledger.v1.ReleaseWithdrawalResponse
+	21, // [21:29] is the sub-list for method output_type
+	13, // [13:21] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_tickless_ledger_v1_ledger_proto_init() }
@@ -971,7 +1291,7 @@ func file_tickless_ledger_v1_ledger_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tickless_ledger_v1_ledger_proto_rawDesc), len(file_tickless_ledger_v1_ledger_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

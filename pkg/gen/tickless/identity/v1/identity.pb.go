@@ -1434,6 +1434,505 @@ func (x *ListFrozenResponse) GetUserIds() []int64 {
 	return nil
 }
 
+type EnrollTOTPRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EnrollTOTPRequest) Reset() {
+	*x = EnrollTOTPRequest{}
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EnrollTOTPRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EnrollTOTPRequest) ProtoMessage() {}
+
+func (x *EnrollTOTPRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EnrollTOTPRequest.ProtoReflect.Descriptor instead.
+func (*EnrollTOTPRequest) Descriptor() ([]byte, []int) {
+	return file_tickless_identity_v1_identity_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *EnrollTOTPRequest) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+type EnrollTOTPResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Base32 secret for the authenticator app (shown once).
+	Secret string `protobuf:"bytes,1,opt,name=secret,proto3" json:"secret,omitempty"`
+	// otpauth:// URI for QR codes.
+	OtpauthUri    string `protobuf:"bytes,2,opt,name=otpauth_uri,json=otpauthUri,proto3" json:"otpauth_uri,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EnrollTOTPResponse) Reset() {
+	*x = EnrollTOTPResponse{}
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EnrollTOTPResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EnrollTOTPResponse) ProtoMessage() {}
+
+func (x *EnrollTOTPResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EnrollTOTPResponse.ProtoReflect.Descriptor instead.
+func (*EnrollTOTPResponse) Descriptor() ([]byte, []int) {
+	return file_tickless_identity_v1_identity_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *EnrollTOTPResponse) GetSecret() string {
+	if x != nil {
+		return x.Secret
+	}
+	return ""
+}
+
+func (x *EnrollTOTPResponse) GetOtpauthUri() string {
+	if x != nil {
+		return x.OtpauthUri
+	}
+	return ""
+}
+
+type ConfirmTOTPRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConfirmTOTPRequest) Reset() {
+	*x = ConfirmTOTPRequest{}
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConfirmTOTPRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConfirmTOTPRequest) ProtoMessage() {}
+
+func (x *ConfirmTOTPRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConfirmTOTPRequest.ProtoReflect.Descriptor instead.
+func (*ConfirmTOTPRequest) Descriptor() ([]byte, []int) {
+	return file_tickless_identity_v1_identity_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *ConfirmTOTPRequest) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *ConfirmTOTPRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+type ConfirmTOTPResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConfirmTOTPResponse) Reset() {
+	*x = ConfirmTOTPResponse{}
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConfirmTOTPResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConfirmTOTPResponse) ProtoMessage() {}
+
+func (x *ConfirmTOTPResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConfirmTOTPResponse.ProtoReflect.Descriptor instead.
+func (*ConfirmTOTPResponse) Descriptor() ([]byte, []int) {
+	return file_tickless_identity_v1_identity_proto_rawDescGZIP(), []int{32}
+}
+
+type VerifyTOTPRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *VerifyTOTPRequest) Reset() {
+	*x = VerifyTOTPRequest{}
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VerifyTOTPRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VerifyTOTPRequest) ProtoMessage() {}
+
+func (x *VerifyTOTPRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VerifyTOTPRequest.ProtoReflect.Descriptor instead.
+func (*VerifyTOTPRequest) Descriptor() ([]byte, []int) {
+	return file_tickless_identity_v1_identity_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *VerifyTOTPRequest) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *VerifyTOTPRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+type VerifyTOTPResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *VerifyTOTPResponse) Reset() {
+	*x = VerifyTOTPResponse{}
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VerifyTOTPResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VerifyTOTPResponse) ProtoMessage() {}
+
+func (x *VerifyTOTPResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VerifyTOTPResponse.ProtoReflect.Descriptor instead.
+func (*VerifyTOTPResponse) Descriptor() ([]byte, []int) {
+	return file_tickless_identity_v1_identity_proto_rawDescGZIP(), []int{34}
+}
+
+type GetUserRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetUserRequest) Reset() {
+	*x = GetUserRequest{}
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUserRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserRequest) ProtoMessage() {}
+
+func (x *GetUserRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUserRequest.ProtoReflect.Descriptor instead.
+func (*GetUserRequest) Descriptor() ([]byte, []int) {
+	return file_tickless_identity_v1_identity_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *GetUserRequest) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+type GetUserResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	Role          string                 `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"`
+	Frozen        bool                   `protobuf:"varint,4,opt,name=frozen,proto3" json:"frozen,omitempty"`
+	EmailVerified bool                   `protobuf:"varint,5,opt,name=email_verified,json=emailVerified,proto3" json:"email_verified,omitempty"`
+	TotpEnabled   bool                   `protobuf:"varint,6,opt,name=totp_enabled,json=totpEnabled,proto3" json:"totp_enabled,omitempty"`
+	// Opt-in "order filled" emails.
+	NotifyOrderFills bool `protobuf:"varint,7,opt,name=notify_order_fills,json=notifyOrderFills,proto3" json:"notify_order_fills,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *GetUserResponse) Reset() {
+	*x = GetUserResponse{}
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserResponse) ProtoMessage() {}
+
+func (x *GetUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUserResponse.ProtoReflect.Descriptor instead.
+func (*GetUserResponse) Descriptor() ([]byte, []int) {
+	return file_tickless_identity_v1_identity_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *GetUserResponse) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *GetUserResponse) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *GetUserResponse) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *GetUserResponse) GetFrozen() bool {
+	if x != nil {
+		return x.Frozen
+	}
+	return false
+}
+
+func (x *GetUserResponse) GetEmailVerified() bool {
+	if x != nil {
+		return x.EmailVerified
+	}
+	return false
+}
+
+func (x *GetUserResponse) GetTotpEnabled() bool {
+	if x != nil {
+		return x.TotpEnabled
+	}
+	return false
+}
+
+func (x *GetUserResponse) GetNotifyOrderFills() bool {
+	if x != nil {
+		return x.NotifyOrderFills
+	}
+	return false
+}
+
+type SetNotificationPrefsRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	UserId           int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	NotifyOrderFills bool                   `protobuf:"varint,2,opt,name=notify_order_fills,json=notifyOrderFills,proto3" json:"notify_order_fills,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *SetNotificationPrefsRequest) Reset() {
+	*x = SetNotificationPrefsRequest{}
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetNotificationPrefsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetNotificationPrefsRequest) ProtoMessage() {}
+
+func (x *SetNotificationPrefsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetNotificationPrefsRequest.ProtoReflect.Descriptor instead.
+func (*SetNotificationPrefsRequest) Descriptor() ([]byte, []int) {
+	return file_tickless_identity_v1_identity_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *SetNotificationPrefsRequest) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *SetNotificationPrefsRequest) GetNotifyOrderFills() bool {
+	if x != nil {
+		return x.NotifyOrderFills
+	}
+	return false
+}
+
+type SetNotificationPrefsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetNotificationPrefsResponse) Reset() {
+	*x = SetNotificationPrefsResponse{}
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetNotificationPrefsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetNotificationPrefsResponse) ProtoMessage() {}
+
+func (x *SetNotificationPrefsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_identity_v1_identity_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetNotificationPrefsResponse.ProtoReflect.Descriptor instead.
+func (*SetNotificationPrefsResponse) Descriptor() ([]byte, []int) {
+	return file_tickless_identity_v1_identity_proto_rawDescGZIP(), []int{38}
+}
+
 var File_tickless_identity_v1_identity_proto protoreflect.FileDescriptor
 
 const file_tickless_identity_v1_identity_proto_rawDesc = "" +
@@ -1514,7 +2013,35 @@ const file_tickless_identity_v1_identity_proto_rawDesc = "" +
 	"\x05users\x18\x01 \x03(\v2\x1e.tickless.identity.v1.UserInfoR\x05users\"\x13\n" +
 	"\x11ListFrozenRequest\"/\n" +
 	"\x12ListFrozenResponse\x12\x19\n" +
-	"\buser_ids\x18\x01 \x03(\x03R\auserIds2\xf2\t\n" +
+	"\buser_ids\x18\x01 \x03(\x03R\auserIds\",\n" +
+	"\x11EnrollTOTPRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x03R\x06userId\"M\n" +
+	"\x12EnrollTOTPResponse\x12\x16\n" +
+	"\x06secret\x18\x01 \x01(\tR\x06secret\x12\x1f\n" +
+	"\votpauth_uri\x18\x02 \x01(\tR\n" +
+	"otpauthUri\"A\n" +
+	"\x12ConfirmTOTPRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x03R\x06userId\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\"\x15\n" +
+	"\x13ConfirmTOTPResponse\"@\n" +
+	"\x11VerifyTOTPRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x03R\x06userId\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\"\x14\n" +
+	"\x12VerifyTOTPResponse\")\n" +
+	"\x0eGetUserRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x03R\x06userId\"\xe4\x01\n" +
+	"\x0fGetUserResponse\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x03R\x06userId\x12\x14\n" +
+	"\x05email\x18\x02 \x01(\tR\x05email\x12\x12\n" +
+	"\x04role\x18\x03 \x01(\tR\x04role\x12\x16\n" +
+	"\x06frozen\x18\x04 \x01(\bR\x06frozen\x12%\n" +
+	"\x0eemail_verified\x18\x05 \x01(\bR\remailVerified\x12!\n" +
+	"\ftotp_enabled\x18\x06 \x01(\bR\vtotpEnabled\x12,\n" +
+	"\x12notify_order_fills\x18\a \x01(\bR\x10notifyOrderFills\"d\n" +
+	"\x1bSetNotificationPrefsRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x03R\x06userId\x12,\n" +
+	"\x12notify_order_fills\x18\x02 \x01(\bR\x10notifyOrderFills\"\x1e\n" +
+	"\x1cSetNotificationPrefsResponse2\xef\r\n" +
 	"\x0fIdentityService\x12S\n" +
 	"\x06Signup\x12#.tickless.identity.v1.SignupRequest\x1a$.tickless.identity.v1.SignupResponse\x12b\n" +
 	"\vVerifyEmail\x12(.tickless.identity.v1.VerifyEmailRequest\x1a).tickless.identity.v1.VerifyEmailResponse\x12P\n" +
@@ -1529,7 +2056,14 @@ const file_tickless_identity_v1_identity_proto_rawDesc = "" +
 	"\rSetUserFrozen\x12*.tickless.identity.v1.SetUserFrozenRequest\x1a+.tickless.identity.v1.SetUserFrozenResponse\x12\\\n" +
 	"\tListUsers\x12&.tickless.identity.v1.ListUsersRequest\x1a'.tickless.identity.v1.ListUsersResponse\x12_\n" +
 	"\n" +
-	"ListFrozen\x12'.tickless.identity.v1.ListFrozenRequest\x1a(.tickless.identity.v1.ListFrozenResponseB\xd8\x01\n" +
+	"ListFrozen\x12'.tickless.identity.v1.ListFrozenRequest\x1a(.tickless.identity.v1.ListFrozenResponse\x12_\n" +
+	"\n" +
+	"EnrollTOTP\x12'.tickless.identity.v1.EnrollTOTPRequest\x1a(.tickless.identity.v1.EnrollTOTPResponse\x12b\n" +
+	"\vConfirmTOTP\x12(.tickless.identity.v1.ConfirmTOTPRequest\x1a).tickless.identity.v1.ConfirmTOTPResponse\x12_\n" +
+	"\n" +
+	"VerifyTOTP\x12'.tickless.identity.v1.VerifyTOTPRequest\x1a(.tickless.identity.v1.VerifyTOTPResponse\x12V\n" +
+	"\aGetUser\x12$.tickless.identity.v1.GetUserRequest\x1a%.tickless.identity.v1.GetUserResponse\x12}\n" +
+	"\x14SetNotificationPrefs\x121.tickless.identity.v1.SetNotificationPrefsRequest\x1a2.tickless.identity.v1.SetNotificationPrefsResponseB\xd8\x01\n" +
 	"\x18com.tickless.identity.v1B\rIdentityProtoP\x01Z;github.com/tickless/pkg/gen/tickless/identity/v1;identityv1\xa2\x02\x03TIX\xaa\x02\x14Tickless.Identity.V1\xca\x02\x14Tickless\\Identity\\V1\xe2\x02 Tickless\\Identity\\V1\\GPBMetadata\xea\x02\x16Tickless::Identity::V1b\x06proto3"
 
 var (
@@ -1544,37 +2078,47 @@ func file_tickless_identity_v1_identity_proto_rawDescGZIP() []byte {
 	return file_tickless_identity_v1_identity_proto_rawDescData
 }
 
-var file_tickless_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_tickless_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 39)
 var file_tickless_identity_v1_identity_proto_goTypes = []any{
-	(*SignupRequest)(nil),         // 0: tickless.identity.v1.SignupRequest
-	(*SignupResponse)(nil),        // 1: tickless.identity.v1.SignupResponse
-	(*VerifyEmailRequest)(nil),    // 2: tickless.identity.v1.VerifyEmailRequest
-	(*VerifyEmailResponse)(nil),   // 3: tickless.identity.v1.VerifyEmailResponse
-	(*LoginRequest)(nil),          // 4: tickless.identity.v1.LoginRequest
-	(*TokenPair)(nil),             // 5: tickless.identity.v1.TokenPair
-	(*LoginResponse)(nil),         // 6: tickless.identity.v1.LoginResponse
-	(*RefreshRequest)(nil),        // 7: tickless.identity.v1.RefreshRequest
-	(*RefreshResponse)(nil),       // 8: tickless.identity.v1.RefreshResponse
-	(*LogoutRequest)(nil),         // 9: tickless.identity.v1.LogoutRequest
-	(*LogoutResponse)(nil),        // 10: tickless.identity.v1.LogoutResponse
-	(*APIKeyInfo)(nil),            // 11: tickless.identity.v1.APIKeyInfo
-	(*CreateAPIKeyRequest)(nil),   // 12: tickless.identity.v1.CreateAPIKeyRequest
-	(*CreateAPIKeyResponse)(nil),  // 13: tickless.identity.v1.CreateAPIKeyResponse
-	(*ListAPIKeysRequest)(nil),    // 14: tickless.identity.v1.ListAPIKeysRequest
-	(*ListAPIKeysResponse)(nil),   // 15: tickless.identity.v1.ListAPIKeysResponse
-	(*RevokeAPIKeyRequest)(nil),   // 16: tickless.identity.v1.RevokeAPIKeyRequest
-	(*RevokeAPIKeyResponse)(nil),  // 17: tickless.identity.v1.RevokeAPIKeyResponse
-	(*LookupAPIKeyRequest)(nil),   // 18: tickless.identity.v1.LookupAPIKeyRequest
-	(*LookupAPIKeyResponse)(nil),  // 19: tickless.identity.v1.LookupAPIKeyResponse
-	(*GetPublicKeyRequest)(nil),   // 20: tickless.identity.v1.GetPublicKeyRequest
-	(*GetPublicKeyResponse)(nil),  // 21: tickless.identity.v1.GetPublicKeyResponse
-	(*SetUserFrozenRequest)(nil),  // 22: tickless.identity.v1.SetUserFrozenRequest
-	(*SetUserFrozenResponse)(nil), // 23: tickless.identity.v1.SetUserFrozenResponse
-	(*UserInfo)(nil),              // 24: tickless.identity.v1.UserInfo
-	(*ListUsersRequest)(nil),      // 25: tickless.identity.v1.ListUsersRequest
-	(*ListUsersResponse)(nil),     // 26: tickless.identity.v1.ListUsersResponse
-	(*ListFrozenRequest)(nil),     // 27: tickless.identity.v1.ListFrozenRequest
-	(*ListFrozenResponse)(nil),    // 28: tickless.identity.v1.ListFrozenResponse
+	(*SignupRequest)(nil),                // 0: tickless.identity.v1.SignupRequest
+	(*SignupResponse)(nil),               // 1: tickless.identity.v1.SignupResponse
+	(*VerifyEmailRequest)(nil),           // 2: tickless.identity.v1.VerifyEmailRequest
+	(*VerifyEmailResponse)(nil),          // 3: tickless.identity.v1.VerifyEmailResponse
+	(*LoginRequest)(nil),                 // 4: tickless.identity.v1.LoginRequest
+	(*TokenPair)(nil),                    // 5: tickless.identity.v1.TokenPair
+	(*LoginResponse)(nil),                // 6: tickless.identity.v1.LoginResponse
+	(*RefreshRequest)(nil),               // 7: tickless.identity.v1.RefreshRequest
+	(*RefreshResponse)(nil),              // 8: tickless.identity.v1.RefreshResponse
+	(*LogoutRequest)(nil),                // 9: tickless.identity.v1.LogoutRequest
+	(*LogoutResponse)(nil),               // 10: tickless.identity.v1.LogoutResponse
+	(*APIKeyInfo)(nil),                   // 11: tickless.identity.v1.APIKeyInfo
+	(*CreateAPIKeyRequest)(nil),          // 12: tickless.identity.v1.CreateAPIKeyRequest
+	(*CreateAPIKeyResponse)(nil),         // 13: tickless.identity.v1.CreateAPIKeyResponse
+	(*ListAPIKeysRequest)(nil),           // 14: tickless.identity.v1.ListAPIKeysRequest
+	(*ListAPIKeysResponse)(nil),          // 15: tickless.identity.v1.ListAPIKeysResponse
+	(*RevokeAPIKeyRequest)(nil),          // 16: tickless.identity.v1.RevokeAPIKeyRequest
+	(*RevokeAPIKeyResponse)(nil),         // 17: tickless.identity.v1.RevokeAPIKeyResponse
+	(*LookupAPIKeyRequest)(nil),          // 18: tickless.identity.v1.LookupAPIKeyRequest
+	(*LookupAPIKeyResponse)(nil),         // 19: tickless.identity.v1.LookupAPIKeyResponse
+	(*GetPublicKeyRequest)(nil),          // 20: tickless.identity.v1.GetPublicKeyRequest
+	(*GetPublicKeyResponse)(nil),         // 21: tickless.identity.v1.GetPublicKeyResponse
+	(*SetUserFrozenRequest)(nil),         // 22: tickless.identity.v1.SetUserFrozenRequest
+	(*SetUserFrozenResponse)(nil),        // 23: tickless.identity.v1.SetUserFrozenResponse
+	(*UserInfo)(nil),                     // 24: tickless.identity.v1.UserInfo
+	(*ListUsersRequest)(nil),             // 25: tickless.identity.v1.ListUsersRequest
+	(*ListUsersResponse)(nil),            // 26: tickless.identity.v1.ListUsersResponse
+	(*ListFrozenRequest)(nil),            // 27: tickless.identity.v1.ListFrozenRequest
+	(*ListFrozenResponse)(nil),           // 28: tickless.identity.v1.ListFrozenResponse
+	(*EnrollTOTPRequest)(nil),            // 29: tickless.identity.v1.EnrollTOTPRequest
+	(*EnrollTOTPResponse)(nil),           // 30: tickless.identity.v1.EnrollTOTPResponse
+	(*ConfirmTOTPRequest)(nil),           // 31: tickless.identity.v1.ConfirmTOTPRequest
+	(*ConfirmTOTPResponse)(nil),          // 32: tickless.identity.v1.ConfirmTOTPResponse
+	(*VerifyTOTPRequest)(nil),            // 33: tickless.identity.v1.VerifyTOTPRequest
+	(*VerifyTOTPResponse)(nil),           // 34: tickless.identity.v1.VerifyTOTPResponse
+	(*GetUserRequest)(nil),               // 35: tickless.identity.v1.GetUserRequest
+	(*GetUserResponse)(nil),              // 36: tickless.identity.v1.GetUserResponse
+	(*SetNotificationPrefsRequest)(nil),  // 37: tickless.identity.v1.SetNotificationPrefsRequest
+	(*SetNotificationPrefsResponse)(nil), // 38: tickless.identity.v1.SetNotificationPrefsResponse
 }
 var file_tickless_identity_v1_identity_proto_depIdxs = []int32{
 	5,  // 0: tickless.identity.v1.LoginResponse.tokens:type_name -> tickless.identity.v1.TokenPair
@@ -1595,21 +2139,31 @@ var file_tickless_identity_v1_identity_proto_depIdxs = []int32{
 	22, // 15: tickless.identity.v1.IdentityService.SetUserFrozen:input_type -> tickless.identity.v1.SetUserFrozenRequest
 	25, // 16: tickless.identity.v1.IdentityService.ListUsers:input_type -> tickless.identity.v1.ListUsersRequest
 	27, // 17: tickless.identity.v1.IdentityService.ListFrozen:input_type -> tickless.identity.v1.ListFrozenRequest
-	1,  // 18: tickless.identity.v1.IdentityService.Signup:output_type -> tickless.identity.v1.SignupResponse
-	3,  // 19: tickless.identity.v1.IdentityService.VerifyEmail:output_type -> tickless.identity.v1.VerifyEmailResponse
-	6,  // 20: tickless.identity.v1.IdentityService.Login:output_type -> tickless.identity.v1.LoginResponse
-	8,  // 21: tickless.identity.v1.IdentityService.Refresh:output_type -> tickless.identity.v1.RefreshResponse
-	10, // 22: tickless.identity.v1.IdentityService.Logout:output_type -> tickless.identity.v1.LogoutResponse
-	13, // 23: tickless.identity.v1.IdentityService.CreateAPIKey:output_type -> tickless.identity.v1.CreateAPIKeyResponse
-	15, // 24: tickless.identity.v1.IdentityService.ListAPIKeys:output_type -> tickless.identity.v1.ListAPIKeysResponse
-	17, // 25: tickless.identity.v1.IdentityService.RevokeAPIKey:output_type -> tickless.identity.v1.RevokeAPIKeyResponse
-	19, // 26: tickless.identity.v1.IdentityService.LookupAPIKey:output_type -> tickless.identity.v1.LookupAPIKeyResponse
-	21, // 27: tickless.identity.v1.IdentityService.GetPublicKey:output_type -> tickless.identity.v1.GetPublicKeyResponse
-	23, // 28: tickless.identity.v1.IdentityService.SetUserFrozen:output_type -> tickless.identity.v1.SetUserFrozenResponse
-	26, // 29: tickless.identity.v1.IdentityService.ListUsers:output_type -> tickless.identity.v1.ListUsersResponse
-	28, // 30: tickless.identity.v1.IdentityService.ListFrozen:output_type -> tickless.identity.v1.ListFrozenResponse
-	18, // [18:31] is the sub-list for method output_type
-	5,  // [5:18] is the sub-list for method input_type
+	29, // 18: tickless.identity.v1.IdentityService.EnrollTOTP:input_type -> tickless.identity.v1.EnrollTOTPRequest
+	31, // 19: tickless.identity.v1.IdentityService.ConfirmTOTP:input_type -> tickless.identity.v1.ConfirmTOTPRequest
+	33, // 20: tickless.identity.v1.IdentityService.VerifyTOTP:input_type -> tickless.identity.v1.VerifyTOTPRequest
+	35, // 21: tickless.identity.v1.IdentityService.GetUser:input_type -> tickless.identity.v1.GetUserRequest
+	37, // 22: tickless.identity.v1.IdentityService.SetNotificationPrefs:input_type -> tickless.identity.v1.SetNotificationPrefsRequest
+	1,  // 23: tickless.identity.v1.IdentityService.Signup:output_type -> tickless.identity.v1.SignupResponse
+	3,  // 24: tickless.identity.v1.IdentityService.VerifyEmail:output_type -> tickless.identity.v1.VerifyEmailResponse
+	6,  // 25: tickless.identity.v1.IdentityService.Login:output_type -> tickless.identity.v1.LoginResponse
+	8,  // 26: tickless.identity.v1.IdentityService.Refresh:output_type -> tickless.identity.v1.RefreshResponse
+	10, // 27: tickless.identity.v1.IdentityService.Logout:output_type -> tickless.identity.v1.LogoutResponse
+	13, // 28: tickless.identity.v1.IdentityService.CreateAPIKey:output_type -> tickless.identity.v1.CreateAPIKeyResponse
+	15, // 29: tickless.identity.v1.IdentityService.ListAPIKeys:output_type -> tickless.identity.v1.ListAPIKeysResponse
+	17, // 30: tickless.identity.v1.IdentityService.RevokeAPIKey:output_type -> tickless.identity.v1.RevokeAPIKeyResponse
+	19, // 31: tickless.identity.v1.IdentityService.LookupAPIKey:output_type -> tickless.identity.v1.LookupAPIKeyResponse
+	21, // 32: tickless.identity.v1.IdentityService.GetPublicKey:output_type -> tickless.identity.v1.GetPublicKeyResponse
+	23, // 33: tickless.identity.v1.IdentityService.SetUserFrozen:output_type -> tickless.identity.v1.SetUserFrozenResponse
+	26, // 34: tickless.identity.v1.IdentityService.ListUsers:output_type -> tickless.identity.v1.ListUsersResponse
+	28, // 35: tickless.identity.v1.IdentityService.ListFrozen:output_type -> tickless.identity.v1.ListFrozenResponse
+	30, // 36: tickless.identity.v1.IdentityService.EnrollTOTP:output_type -> tickless.identity.v1.EnrollTOTPResponse
+	32, // 37: tickless.identity.v1.IdentityService.ConfirmTOTP:output_type -> tickless.identity.v1.ConfirmTOTPResponse
+	34, // 38: tickless.identity.v1.IdentityService.VerifyTOTP:output_type -> tickless.identity.v1.VerifyTOTPResponse
+	36, // 39: tickless.identity.v1.IdentityService.GetUser:output_type -> tickless.identity.v1.GetUserResponse
+	38, // 40: tickless.identity.v1.IdentityService.SetNotificationPrefs:output_type -> tickless.identity.v1.SetNotificationPrefsResponse
+	23, // [23:41] is the sub-list for method output_type
+	5,  // [5:23] is the sub-list for method input_type
 	5,  // [5:5] is the sub-list for extension type_name
 	5,  // [5:5] is the sub-list for extension extendee
 	0,  // [0:5] is the sub-list for field type_name
@@ -1626,7 +2180,7 @@ func file_tickless_identity_v1_identity_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tickless_identity_v1_identity_proto_rawDesc), len(file_tickless_identity_v1_identity_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   29,
+			NumMessages:   39,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

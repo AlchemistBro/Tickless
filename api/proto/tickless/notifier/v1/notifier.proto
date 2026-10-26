@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package tickless.notifier.v1;
+
+// EmailTask is one email to send. It travels through the RabbitMQ queue
+// "notifications" (retried with backoff, dead-lettered to
+// "notifications.dlq" after the retry budget).
+message EmailTask {
+  // Unique and stable for the business event (e.g. "deposit:btc:<txid>:0"),
+  // so redelivery is recognisable.
+  string task_id = 1;
+  string to = 2;
+  // Template name: verify_email, deposit_credited, withdrawal_requested,
+  // withdrawal_sent, withdrawal_review, order_filled.
+  string template = 3;
+  map<string, string> data = 4;
+}

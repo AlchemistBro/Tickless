@@ -4,6 +4,79 @@ package tickless.withdrawals.v1;
 
 import "tickless/common/v1/common.proto";
 
+service WithdrawalsService {
+  // RequestWithdrawal validates the destination, the user's daily limit and
+  // TOTP code, holds the funds in the ledger and queues screening.
+  rpc RequestWithdrawal(RequestWithdrawalRequest) returns (RequestWithdrawalResponse);
+  rpc GetWithdrawal(GetWithdrawalRequest) returns (GetWithdrawalResponse);
+  rpc ListWithdrawals(ListWithdrawalsRequest) returns (ListWithdrawalsResponse);
+  // Admin review queue (withdrawals above the threshold).
+  rpc ListPendingReview(ListPendingReviewRequest) returns (ListPendingReviewResponse);
+  rpc ReviewWithdrawal(ReviewWithdrawalRequest) returns (ReviewWithdrawalResponse);
+}
+
+message RequestWithdrawalRequest {
+  int64 user_id = 1;
+  string chain = 2;
+  string asset = 3;
+  tickless.common.v1.Amount amount = 4;
+  string destination = 5;
+  string totp_code = 6;
+}
+
+message GetWithdrawalRequest {
+  int64 user_id = 1;
+  int64 withdrawal_id = 2;
+}
+
+message ListWithdrawalsRequest {
+  int64 user_id = 1;
+}
+
+message ListPendingReviewRequest {}
+
+message ReviewWithdrawalRequest {
+  int64 withdrawal_id = 1;
+  bool approve = 2;
+  int64 admin_user_id = 3;
+  string reason = 4;
+}
+
+message Withdrawal {
+  int64 id = 1;
+  int64 user_id = 2;
+  string chain = 3;
+  string asset = 4;
+  tickless.common.v1.Amount amount = 5;
+  string destination = 6;
+  string state = 7;
+  string reason = 8;
+  string txid = 9;
+  int64 confirmations = 10;
+  int64 created_at_unix_nano = 11;
+  int64 updated_at_unix_nano = 12;
+}
+
+message ListWithdrawalsResponse {
+  repeated Withdrawal withdrawals = 1;
+}
+
+message RequestWithdrawalResponse {
+  Withdrawal withdrawal = 1;
+}
+
+message GetWithdrawalResponse {
+  Withdrawal withdrawal = 1;
+}
+
+message ListPendingReviewResponse {
+  repeated Withdrawal withdrawals = 1;
+}
+
+message ReviewWithdrawalResponse {
+  Withdrawal withdrawal = 1;
+}
+
 // WithdrawalEvent is published to withdrawals.events (key: user id) on every
 // state transition. Consumers dedupe on meta.event_id.
 message WithdrawalEvent {

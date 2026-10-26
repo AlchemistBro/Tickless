@@ -22,6 +22,642 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type RequestWithdrawalRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Chain         string                 `protobuf:"bytes,2,opt,name=chain,proto3" json:"chain,omitempty"`
+	Asset         string                 `protobuf:"bytes,3,opt,name=asset,proto3" json:"asset,omitempty"`
+	Amount        *v1.Amount             `protobuf:"bytes,4,opt,name=amount,proto3" json:"amount,omitempty"`
+	Destination   string                 `protobuf:"bytes,5,opt,name=destination,proto3" json:"destination,omitempty"`
+	TotpCode      string                 `protobuf:"bytes,6,opt,name=totp_code,json=totpCode,proto3" json:"totp_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestWithdrawalRequest) Reset() {
+	*x = RequestWithdrawalRequest{}
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestWithdrawalRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestWithdrawalRequest) ProtoMessage() {}
+
+func (x *RequestWithdrawalRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestWithdrawalRequest.ProtoReflect.Descriptor instead.
+func (*RequestWithdrawalRequest) Descriptor() ([]byte, []int) {
+	return file_tickless_withdrawals_v1_withdrawals_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *RequestWithdrawalRequest) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *RequestWithdrawalRequest) GetChain() string {
+	if x != nil {
+		return x.Chain
+	}
+	return ""
+}
+
+func (x *RequestWithdrawalRequest) GetAsset() string {
+	if x != nil {
+		return x.Asset
+	}
+	return ""
+}
+
+func (x *RequestWithdrawalRequest) GetAmount() *v1.Amount {
+	if x != nil {
+		return x.Amount
+	}
+	return nil
+}
+
+func (x *RequestWithdrawalRequest) GetDestination() string {
+	if x != nil {
+		return x.Destination
+	}
+	return ""
+}
+
+func (x *RequestWithdrawalRequest) GetTotpCode() string {
+	if x != nil {
+		return x.TotpCode
+	}
+	return ""
+}
+
+type GetWithdrawalRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	WithdrawalId  int64                  `protobuf:"varint,2,opt,name=withdrawal_id,json=withdrawalId,proto3" json:"withdrawal_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetWithdrawalRequest) Reset() {
+	*x = GetWithdrawalRequest{}
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWithdrawalRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWithdrawalRequest) ProtoMessage() {}
+
+func (x *GetWithdrawalRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWithdrawalRequest.ProtoReflect.Descriptor instead.
+func (*GetWithdrawalRequest) Descriptor() ([]byte, []int) {
+	return file_tickless_withdrawals_v1_withdrawals_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *GetWithdrawalRequest) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *GetWithdrawalRequest) GetWithdrawalId() int64 {
+	if x != nil {
+		return x.WithdrawalId
+	}
+	return 0
+}
+
+type ListWithdrawalsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListWithdrawalsRequest) Reset() {
+	*x = ListWithdrawalsRequest{}
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListWithdrawalsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListWithdrawalsRequest) ProtoMessage() {}
+
+func (x *ListWithdrawalsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListWithdrawalsRequest.ProtoReflect.Descriptor instead.
+func (*ListWithdrawalsRequest) Descriptor() ([]byte, []int) {
+	return file_tickless_withdrawals_v1_withdrawals_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ListWithdrawalsRequest) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+type ListPendingReviewRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPendingReviewRequest) Reset() {
+	*x = ListPendingReviewRequest{}
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPendingReviewRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPendingReviewRequest) ProtoMessage() {}
+
+func (x *ListPendingReviewRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPendingReviewRequest.ProtoReflect.Descriptor instead.
+func (*ListPendingReviewRequest) Descriptor() ([]byte, []int) {
+	return file_tickless_withdrawals_v1_withdrawals_proto_rawDescGZIP(), []int{3}
+}
+
+type ReviewWithdrawalRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WithdrawalId  int64                  `protobuf:"varint,1,opt,name=withdrawal_id,json=withdrawalId,proto3" json:"withdrawal_id,omitempty"`
+	Approve       bool                   `protobuf:"varint,2,opt,name=approve,proto3" json:"approve,omitempty"`
+	AdminUserId   int64                  `protobuf:"varint,3,opt,name=admin_user_id,json=adminUserId,proto3" json:"admin_user_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReviewWithdrawalRequest) Reset() {
+	*x = ReviewWithdrawalRequest{}
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReviewWithdrawalRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReviewWithdrawalRequest) ProtoMessage() {}
+
+func (x *ReviewWithdrawalRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReviewWithdrawalRequest.ProtoReflect.Descriptor instead.
+func (*ReviewWithdrawalRequest) Descriptor() ([]byte, []int) {
+	return file_tickless_withdrawals_v1_withdrawals_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ReviewWithdrawalRequest) GetWithdrawalId() int64 {
+	if x != nil {
+		return x.WithdrawalId
+	}
+	return 0
+}
+
+func (x *ReviewWithdrawalRequest) GetApprove() bool {
+	if x != nil {
+		return x.Approve
+	}
+	return false
+}
+
+func (x *ReviewWithdrawalRequest) GetAdminUserId() int64 {
+	if x != nil {
+		return x.AdminUserId
+	}
+	return 0
+}
+
+func (x *ReviewWithdrawalRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type Withdrawal struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	UserId            int64                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Chain             string                 `protobuf:"bytes,3,opt,name=chain,proto3" json:"chain,omitempty"`
+	Asset             string                 `protobuf:"bytes,4,opt,name=asset,proto3" json:"asset,omitempty"`
+	Amount            *v1.Amount             `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
+	Destination       string                 `protobuf:"bytes,6,opt,name=destination,proto3" json:"destination,omitempty"`
+	State             string                 `protobuf:"bytes,7,opt,name=state,proto3" json:"state,omitempty"`
+	Reason            string                 `protobuf:"bytes,8,opt,name=reason,proto3" json:"reason,omitempty"`
+	Txid              string                 `protobuf:"bytes,9,opt,name=txid,proto3" json:"txid,omitempty"`
+	Confirmations     int64                  `protobuf:"varint,10,opt,name=confirmations,proto3" json:"confirmations,omitempty"`
+	CreatedAtUnixNano int64                  `protobuf:"varint,11,opt,name=created_at_unix_nano,json=createdAtUnixNano,proto3" json:"created_at_unix_nano,omitempty"`
+	UpdatedAtUnixNano int64                  `protobuf:"varint,12,opt,name=updated_at_unix_nano,json=updatedAtUnixNano,proto3" json:"updated_at_unix_nano,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *Withdrawal) Reset() {
+	*x = Withdrawal{}
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Withdrawal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Withdrawal) ProtoMessage() {}
+
+func (x *Withdrawal) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Withdrawal.ProtoReflect.Descriptor instead.
+func (*Withdrawal) Descriptor() ([]byte, []int) {
+	return file_tickless_withdrawals_v1_withdrawals_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *Withdrawal) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *Withdrawal) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *Withdrawal) GetChain() string {
+	if x != nil {
+		return x.Chain
+	}
+	return ""
+}
+
+func (x *Withdrawal) GetAsset() string {
+	if x != nil {
+		return x.Asset
+	}
+	return ""
+}
+
+func (x *Withdrawal) GetAmount() *v1.Amount {
+	if x != nil {
+		return x.Amount
+	}
+	return nil
+}
+
+func (x *Withdrawal) GetDestination() string {
+	if x != nil {
+		return x.Destination
+	}
+	return ""
+}
+
+func (x *Withdrawal) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *Withdrawal) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *Withdrawal) GetTxid() string {
+	if x != nil {
+		return x.Txid
+	}
+	return ""
+}
+
+func (x *Withdrawal) GetConfirmations() int64 {
+	if x != nil {
+		return x.Confirmations
+	}
+	return 0
+}
+
+func (x *Withdrawal) GetCreatedAtUnixNano() int64 {
+	if x != nil {
+		return x.CreatedAtUnixNano
+	}
+	return 0
+}
+
+func (x *Withdrawal) GetUpdatedAtUnixNano() int64 {
+	if x != nil {
+		return x.UpdatedAtUnixNano
+	}
+	return 0
+}
+
+type ListWithdrawalsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Withdrawals   []*Withdrawal          `protobuf:"bytes,1,rep,name=withdrawals,proto3" json:"withdrawals,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListWithdrawalsResponse) Reset() {
+	*x = ListWithdrawalsResponse{}
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListWithdrawalsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListWithdrawalsResponse) ProtoMessage() {}
+
+func (x *ListWithdrawalsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListWithdrawalsResponse.ProtoReflect.Descriptor instead.
+func (*ListWithdrawalsResponse) Descriptor() ([]byte, []int) {
+	return file_tickless_withdrawals_v1_withdrawals_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ListWithdrawalsResponse) GetWithdrawals() []*Withdrawal {
+	if x != nil {
+		return x.Withdrawals
+	}
+	return nil
+}
+
+type RequestWithdrawalResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Withdrawal    *Withdrawal            `protobuf:"bytes,1,opt,name=withdrawal,proto3" json:"withdrawal,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestWithdrawalResponse) Reset() {
+	*x = RequestWithdrawalResponse{}
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestWithdrawalResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestWithdrawalResponse) ProtoMessage() {}
+
+func (x *RequestWithdrawalResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestWithdrawalResponse.ProtoReflect.Descriptor instead.
+func (*RequestWithdrawalResponse) Descriptor() ([]byte, []int) {
+	return file_tickless_withdrawals_v1_withdrawals_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *RequestWithdrawalResponse) GetWithdrawal() *Withdrawal {
+	if x != nil {
+		return x.Withdrawal
+	}
+	return nil
+}
+
+type GetWithdrawalResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Withdrawal    *Withdrawal            `protobuf:"bytes,1,opt,name=withdrawal,proto3" json:"withdrawal,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetWithdrawalResponse) Reset() {
+	*x = GetWithdrawalResponse{}
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWithdrawalResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWithdrawalResponse) ProtoMessage() {}
+
+func (x *GetWithdrawalResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWithdrawalResponse.ProtoReflect.Descriptor instead.
+func (*GetWithdrawalResponse) Descriptor() ([]byte, []int) {
+	return file_tickless_withdrawals_v1_withdrawals_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *GetWithdrawalResponse) GetWithdrawal() *Withdrawal {
+	if x != nil {
+		return x.Withdrawal
+	}
+	return nil
+}
+
+type ListPendingReviewResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Withdrawals   []*Withdrawal          `protobuf:"bytes,1,rep,name=withdrawals,proto3" json:"withdrawals,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPendingReviewResponse) Reset() {
+	*x = ListPendingReviewResponse{}
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPendingReviewResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPendingReviewResponse) ProtoMessage() {}
+
+func (x *ListPendingReviewResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPendingReviewResponse.ProtoReflect.Descriptor instead.
+func (*ListPendingReviewResponse) Descriptor() ([]byte, []int) {
+	return file_tickless_withdrawals_v1_withdrawals_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ListPendingReviewResponse) GetWithdrawals() []*Withdrawal {
+	if x != nil {
+		return x.Withdrawals
+	}
+	return nil
+}
+
+type ReviewWithdrawalResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Withdrawal    *Withdrawal            `protobuf:"bytes,1,opt,name=withdrawal,proto3" json:"withdrawal,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReviewWithdrawalResponse) Reset() {
+	*x = ReviewWithdrawalResponse{}
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReviewWithdrawalResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReviewWithdrawalResponse) ProtoMessage() {}
+
+func (x *ReviewWithdrawalResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReviewWithdrawalResponse.ProtoReflect.Descriptor instead.
+func (*ReviewWithdrawalResponse) Descriptor() ([]byte, []int) {
+	return file_tickless_withdrawals_v1_withdrawals_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ReviewWithdrawalResponse) GetWithdrawal() *Withdrawal {
+	if x != nil {
+		return x.Withdrawal
+	}
+	return nil
+}
+
 // WithdrawalEvent is published to withdrawals.events (key: user id) on every
 // state transition. Consumers dedupe on meta.event_id.
 type WithdrawalEvent struct {
@@ -42,7 +678,7 @@ type WithdrawalEvent struct {
 
 func (x *WithdrawalEvent) Reset() {
 	*x = WithdrawalEvent{}
-	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[0]
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -54,7 +690,7 @@ func (x *WithdrawalEvent) String() string {
 func (*WithdrawalEvent) ProtoMessage() {}
 
 func (x *WithdrawalEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[0]
+	mi := &file_tickless_withdrawals_v1_withdrawals_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -67,7 +703,7 @@ func (x *WithdrawalEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WithdrawalEvent.ProtoReflect.Descriptor instead.
 func (*WithdrawalEvent) Descriptor() ([]byte, []int) {
-	return file_tickless_withdrawals_v1_withdrawals_proto_rawDescGZIP(), []int{0}
+	return file_tickless_withdrawals_v1_withdrawals_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *WithdrawalEvent) GetMeta() *v1.EventMeta {
@@ -144,7 +780,56 @@ var File_tickless_withdrawals_v1_withdrawals_proto protoreflect.FileDescriptor
 
 const file_tickless_withdrawals_v1_withdrawals_proto_rawDesc = "" +
 	"\n" +
-	")tickless/withdrawals/v1/withdrawals.proto\x12\x17tickless.withdrawals.v1\x1a\x1ftickless/common/v1/common.proto\"\xd6\x02\n" +
+	")tickless/withdrawals/v1/withdrawals.proto\x12\x17tickless.withdrawals.v1\x1a\x1ftickless/common/v1/common.proto\"\xd2\x01\n" +
+	"\x18RequestWithdrawalRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x03R\x06userId\x12\x14\n" +
+	"\x05chain\x18\x02 \x01(\tR\x05chain\x12\x14\n" +
+	"\x05asset\x18\x03 \x01(\tR\x05asset\x122\n" +
+	"\x06amount\x18\x04 \x01(\v2\x1a.tickless.common.v1.AmountR\x06amount\x12 \n" +
+	"\vdestination\x18\x05 \x01(\tR\vdestination\x12\x1b\n" +
+	"\ttotp_code\x18\x06 \x01(\tR\btotpCode\"T\n" +
+	"\x14GetWithdrawalRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x03R\x06userId\x12#\n" +
+	"\rwithdrawal_id\x18\x02 \x01(\x03R\fwithdrawalId\"1\n" +
+	"\x16ListWithdrawalsRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x03R\x06userId\"\x1a\n" +
+	"\x18ListPendingReviewRequest\"\x94\x01\n" +
+	"\x17ReviewWithdrawalRequest\x12#\n" +
+	"\rwithdrawal_id\x18\x01 \x01(\x03R\fwithdrawalId\x12\x18\n" +
+	"\aapprove\x18\x02 \x01(\bR\aapprove\x12\"\n" +
+	"\radmin_user_id\x18\x03 \x01(\x03R\vadminUserId\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\"\x81\x03\n" +
+	"\n" +
+	"Withdrawal\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\x03R\x06userId\x12\x14\n" +
+	"\x05chain\x18\x03 \x01(\tR\x05chain\x12\x14\n" +
+	"\x05asset\x18\x04 \x01(\tR\x05asset\x122\n" +
+	"\x06amount\x18\x05 \x01(\v2\x1a.tickless.common.v1.AmountR\x06amount\x12 \n" +
+	"\vdestination\x18\x06 \x01(\tR\vdestination\x12\x14\n" +
+	"\x05state\x18\a \x01(\tR\x05state\x12\x16\n" +
+	"\x06reason\x18\b \x01(\tR\x06reason\x12\x12\n" +
+	"\x04txid\x18\t \x01(\tR\x04txid\x12$\n" +
+	"\rconfirmations\x18\n" +
+	" \x01(\x03R\rconfirmations\x12/\n" +
+	"\x14created_at_unix_nano\x18\v \x01(\x03R\x11createdAtUnixNano\x12/\n" +
+	"\x14updated_at_unix_nano\x18\f \x01(\x03R\x11updatedAtUnixNano\"`\n" +
+	"\x17ListWithdrawalsResponse\x12E\n" +
+	"\vwithdrawals\x18\x01 \x03(\v2#.tickless.withdrawals.v1.WithdrawalR\vwithdrawals\"`\n" +
+	"\x19RequestWithdrawalResponse\x12C\n" +
+	"\n" +
+	"withdrawal\x18\x01 \x01(\v2#.tickless.withdrawals.v1.WithdrawalR\n" +
+	"withdrawal\"\\\n" +
+	"\x15GetWithdrawalResponse\x12C\n" +
+	"\n" +
+	"withdrawal\x18\x01 \x01(\v2#.tickless.withdrawals.v1.WithdrawalR\n" +
+	"withdrawal\"b\n" +
+	"\x19ListPendingReviewResponse\x12E\n" +
+	"\vwithdrawals\x18\x01 \x03(\v2#.tickless.withdrawals.v1.WithdrawalR\vwithdrawals\"_\n" +
+	"\x18ReviewWithdrawalResponse\x12C\n" +
+	"\n" +
+	"withdrawal\x18\x01 \x01(\v2#.tickless.withdrawals.v1.WithdrawalR\n" +
+	"withdrawal\"\xd6\x02\n" +
 	"\x0fWithdrawalEvent\x121\n" +
 	"\x04meta\x18\x01 \x01(\v2\x1d.tickless.common.v1.EventMetaR\x04meta\x12#\n" +
 	"\rwithdrawal_id\x18\x02 \x01(\x03R\fwithdrawalId\x12\x17\n" +
@@ -157,7 +842,13 @@ const file_tickless_withdrawals_v1_withdrawals_proto_rawDesc = "" +
 	"from_state\x18\b \x01(\tR\tfromState\x12\x19\n" +
 	"\bto_state\x18\t \x01(\tR\atoState\x12\x16\n" +
 	"\x06reason\x18\n" +
-	" \x01(\tR\x06reasonB\xf0\x01\n" +
+	" \x01(\tR\x06reason2\xeb\x04\n" +
+	"\x12WithdrawalsService\x12z\n" +
+	"\x11RequestWithdrawal\x121.tickless.withdrawals.v1.RequestWithdrawalRequest\x1a2.tickless.withdrawals.v1.RequestWithdrawalResponse\x12n\n" +
+	"\rGetWithdrawal\x12-.tickless.withdrawals.v1.GetWithdrawalRequest\x1a..tickless.withdrawals.v1.GetWithdrawalResponse\x12t\n" +
+	"\x0fListWithdrawals\x12/.tickless.withdrawals.v1.ListWithdrawalsRequest\x1a0.tickless.withdrawals.v1.ListWithdrawalsResponse\x12z\n" +
+	"\x11ListPendingReview\x121.tickless.withdrawals.v1.ListPendingReviewRequest\x1a2.tickless.withdrawals.v1.ListPendingReviewResponse\x12w\n" +
+	"\x10ReviewWithdrawal\x120.tickless.withdrawals.v1.ReviewWithdrawalRequest\x1a1.tickless.withdrawals.v1.ReviewWithdrawalResponseB\xf0\x01\n" +
 	"\x1bcom.tickless.withdrawals.v1B\x10WithdrawalsProtoP\x01ZAgithub.com/tickless/pkg/gen/tickless/withdrawals/v1;withdrawalsv1\xa2\x02\x03TWX\xaa\x02\x17Tickless.Withdrawals.V1\xca\x02\x17Tickless\\Withdrawals\\V1\xe2\x02#Tickless\\Withdrawals\\V1\\GPBMetadata\xea\x02\x19Tickless::Withdrawals::V1b\x06proto3"
 
 var (
@@ -172,20 +863,48 @@ func file_tickless_withdrawals_v1_withdrawals_proto_rawDescGZIP() []byte {
 	return file_tickless_withdrawals_v1_withdrawals_proto_rawDescData
 }
 
-var file_tickless_withdrawals_v1_withdrawals_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_tickless_withdrawals_v1_withdrawals_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_tickless_withdrawals_v1_withdrawals_proto_goTypes = []any{
-	(*WithdrawalEvent)(nil), // 0: tickless.withdrawals.v1.WithdrawalEvent
-	(*v1.EventMeta)(nil),    // 1: tickless.common.v1.EventMeta
-	(*v1.Amount)(nil),       // 2: tickless.common.v1.Amount
+	(*RequestWithdrawalRequest)(nil),  // 0: tickless.withdrawals.v1.RequestWithdrawalRequest
+	(*GetWithdrawalRequest)(nil),      // 1: tickless.withdrawals.v1.GetWithdrawalRequest
+	(*ListWithdrawalsRequest)(nil),    // 2: tickless.withdrawals.v1.ListWithdrawalsRequest
+	(*ListPendingReviewRequest)(nil),  // 3: tickless.withdrawals.v1.ListPendingReviewRequest
+	(*ReviewWithdrawalRequest)(nil),   // 4: tickless.withdrawals.v1.ReviewWithdrawalRequest
+	(*Withdrawal)(nil),                // 5: tickless.withdrawals.v1.Withdrawal
+	(*ListWithdrawalsResponse)(nil),   // 6: tickless.withdrawals.v1.ListWithdrawalsResponse
+	(*RequestWithdrawalResponse)(nil), // 7: tickless.withdrawals.v1.RequestWithdrawalResponse
+	(*GetWithdrawalResponse)(nil),     // 8: tickless.withdrawals.v1.GetWithdrawalResponse
+	(*ListPendingReviewResponse)(nil), // 9: tickless.withdrawals.v1.ListPendingReviewResponse
+	(*ReviewWithdrawalResponse)(nil),  // 10: tickless.withdrawals.v1.ReviewWithdrawalResponse
+	(*WithdrawalEvent)(nil),           // 11: tickless.withdrawals.v1.WithdrawalEvent
+	(*v1.Amount)(nil),                 // 12: tickless.common.v1.Amount
+	(*v1.EventMeta)(nil),              // 13: tickless.common.v1.EventMeta
 }
 var file_tickless_withdrawals_v1_withdrawals_proto_depIdxs = []int32{
-	1, // 0: tickless.withdrawals.v1.WithdrawalEvent.meta:type_name -> tickless.common.v1.EventMeta
-	2, // 1: tickless.withdrawals.v1.WithdrawalEvent.amount:type_name -> tickless.common.v1.Amount
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	12, // 0: tickless.withdrawals.v1.RequestWithdrawalRequest.amount:type_name -> tickless.common.v1.Amount
+	12, // 1: tickless.withdrawals.v1.Withdrawal.amount:type_name -> tickless.common.v1.Amount
+	5,  // 2: tickless.withdrawals.v1.ListWithdrawalsResponse.withdrawals:type_name -> tickless.withdrawals.v1.Withdrawal
+	5,  // 3: tickless.withdrawals.v1.RequestWithdrawalResponse.withdrawal:type_name -> tickless.withdrawals.v1.Withdrawal
+	5,  // 4: tickless.withdrawals.v1.GetWithdrawalResponse.withdrawal:type_name -> tickless.withdrawals.v1.Withdrawal
+	5,  // 5: tickless.withdrawals.v1.ListPendingReviewResponse.withdrawals:type_name -> tickless.withdrawals.v1.Withdrawal
+	5,  // 6: tickless.withdrawals.v1.ReviewWithdrawalResponse.withdrawal:type_name -> tickless.withdrawals.v1.Withdrawal
+	13, // 7: tickless.withdrawals.v1.WithdrawalEvent.meta:type_name -> tickless.common.v1.EventMeta
+	12, // 8: tickless.withdrawals.v1.WithdrawalEvent.amount:type_name -> tickless.common.v1.Amount
+	0,  // 9: tickless.withdrawals.v1.WithdrawalsService.RequestWithdrawal:input_type -> tickless.withdrawals.v1.RequestWithdrawalRequest
+	1,  // 10: tickless.withdrawals.v1.WithdrawalsService.GetWithdrawal:input_type -> tickless.withdrawals.v1.GetWithdrawalRequest
+	2,  // 11: tickless.withdrawals.v1.WithdrawalsService.ListWithdrawals:input_type -> tickless.withdrawals.v1.ListWithdrawalsRequest
+	3,  // 12: tickless.withdrawals.v1.WithdrawalsService.ListPendingReview:input_type -> tickless.withdrawals.v1.ListPendingReviewRequest
+	4,  // 13: tickless.withdrawals.v1.WithdrawalsService.ReviewWithdrawal:input_type -> tickless.withdrawals.v1.ReviewWithdrawalRequest
+	7,  // 14: tickless.withdrawals.v1.WithdrawalsService.RequestWithdrawal:output_type -> tickless.withdrawals.v1.RequestWithdrawalResponse
+	8,  // 15: tickless.withdrawals.v1.WithdrawalsService.GetWithdrawal:output_type -> tickless.withdrawals.v1.GetWithdrawalResponse
+	6,  // 16: tickless.withdrawals.v1.WithdrawalsService.ListWithdrawals:output_type -> tickless.withdrawals.v1.ListWithdrawalsResponse
+	9,  // 17: tickless.withdrawals.v1.WithdrawalsService.ListPendingReview:output_type -> tickless.withdrawals.v1.ListPendingReviewResponse
+	10, // 18: tickless.withdrawals.v1.WithdrawalsService.ReviewWithdrawal:output_type -> tickless.withdrawals.v1.ReviewWithdrawalResponse
+	14, // [14:19] is the sub-list for method output_type
+	9,  // [9:14] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_tickless_withdrawals_v1_withdrawals_proto_init() }
@@ -199,9 +918,9 @@ func file_tickless_withdrawals_v1_withdrawals_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tickless_withdrawals_v1_withdrawals_proto_rawDesc), len(file_tickless_withdrawals_v1_withdrawals_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   12,
 			NumExtensions: 0,
-			NumServices:   0,
+			NumServices:   1,
 		},
 		GoTypes:           file_tickless_withdrawals_v1_withdrawals_proto_goTypes,
 		DependencyIndexes: file_tickless_withdrawals_v1_withdrawals_proto_depIdxs,
