@@ -26,6 +26,7 @@ import (
 	ordersv1 "github.com/tickless/pkg/gen/tickless/orders/v1"
 	usersv1 "github.com/tickless/pkg/gen/tickless/users/v1"
 	walletv1 "github.com/tickless/pkg/gen/tickless/wallet/v1"
+	withdrawalsv1 "github.com/tickless/pkg/gen/tickless/withdrawals/v1"
 	"github.com/tickless/pkg/kafka"
 	"github.com/tickless/pkg/market"
 	"github.com/tickless/pkg/otelx"
@@ -37,6 +38,7 @@ type Config struct {
 	HTTPAddr, AdminAddr                  string
 	IdentityAddr, LedgerAddr, OrdersAddr string
 	WalletAddr, ChainwatcherAddr         string // empty disables deposits
+	WithdrawalsAddr                      string // empty disables withdrawals
 	RedisAddr                            string
 	KafkaBrokers                         string
 	MarketDataURL                        string
@@ -72,7 +74,8 @@ func ConfigFromEnv() Config {
 		IdentityAddr: svc.Env("IDENTITY_ADDR", "localhost:9103"), LedgerAddr: svc.Env("LEDGER_ADDR", "localhost:9101"),
 		OrdersAddr: svc.Env("ORDERS_ADDR", "localhost:9102"), RedisAddr: svc.Env("REDIS_ADDR", "localhost:6379"),
 		WalletAddr: svc.Env("WALLET_ADDR", ""), ChainwatcherAddr: svc.Env("CHAINWATCHER_ADDR", ""),
-		KafkaBrokers: svc.Env("KAFKA_BROKERS", "localhost:9092"), AllowedOrigins: origins,
+		WithdrawalsAddr: svc.Env("WITHDRAWALS_ADDR", ""),
+		KafkaBrokers:    svc.Env("KAFKA_BROKERS", "localhost:9092"), AllowedOrigins: origins,
 		TrustProxy: svc.EnvBool("TRUST_PROXY", false), Limits: l,
 	}
 }
@@ -118,12 +121,21 @@ func Run(ctx context.Context, cfg Config) error {
 		defer func() { _ = cwConn.Close() }()
 		wallet, chainwatcher = walletv1.NewWalletServiceClient(walletConn), chainwatcherv1.NewChainwatcherServiceClient(cwConn)
 	}
+	var withdrawals withdrawalsv1.WithdrawalsServiceClient
+	if cfg.WithdrawalsAddr != "" {
+		wdConn, err := svc.Dial(cfg.WithdrawalsAddr)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = wdConn.Close() }()
+		withdrawals = withdrawalsv1.NewWithdrawalsServiceClient(wdConn)
+	}
 	identity := identityv1.NewIdentityServiceClient(idConn)
 	markets := market.NewCache(market.FetchFromOrders(ordersv1.NewOrdersServiceClient(ordersConn)))
 
 	api := httpapi.New(httpapi.Deps{
 		Identity: identity, Ledger: ledgerv1.NewLedgerServiceClient(ledgerConn), Orders: ordersv1.NewOrdersServiceClient(ordersConn),
-		Wallet: wallet, Chainwatcher: chainwatcher,
+		Wallet: wallet, Chainwatcher: chainwatcher, Withdrawals: withdrawals,
 		Redis: rdb, Limits: cfg.Limits, AllowedOrigins: cfg.AllowedOrigins, TrustProxy: cfg.TrustProxy, RequireFrozenSync: true, MarketData: cfg.MarketDataURL, WSOrigins: cfg.WSOrigins, Markets: markets,
 		PublicKey: func(ctx context.Context) (ed25519.PublicKey, error) {
 			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)

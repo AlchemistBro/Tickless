@@ -176,6 +176,122 @@ paths:
                   deposits: {type: array, items: {$ref: '#/components/schemas/Deposit'}}
         '401': {$ref: '#/components/responses/Error'}
         '503': {$ref: '#/components/responses/Error'}
+  /v1/me:
+    get:
+      operationId: getMe
+      summary: The caller's account (session only)
+      responses:
+        '200': {description: Account, content: {application/json: {schema: {$ref: '#/components/schemas/Me'}}}}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+  /v1/me/notifications:
+    put:
+      operationId: setNotifications
+      summary: Opt in or out of order-filled emails (session only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [order_fills]
+              additionalProperties: false
+              properties:
+                order_fills: {type: boolean}
+      responses:
+        '204': {description: Saved}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /v1/2fa/totp:
+    post:
+      operationId: enrollTotp
+      summary: Start TOTP two-factor authentication (session only)
+      description: Returns the secret once. Two-factor authentication is active after /v1/2fa/totp/confirm.
+      responses:
+        '201':
+          description: Secret for the authenticator app
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [secret, otpauth_uri]
+                properties:
+                  secret: {type: string, description: base32 without padding}
+                  otpauth_uri: {type: string}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /v1/2fa/totp/confirm:
+    post:
+      operationId: confirmTotp
+      summary: Activate TOTP with a first code (session only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              additionalProperties: false
+              properties:
+                code: {type: string, pattern: '^[0-9]{6}$'}
+      responses:
+        '204': {description: Activated}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /v1/withdrawals:
+    get:
+      operationId: listWithdrawals
+      summary: The caller's withdrawals, newest first
+      responses:
+        '200':
+          description: Withdrawals
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [withdrawals]
+                properties:
+                  withdrawals: {type: array, items: {$ref: '#/components/schemas/Withdrawal'}}
+        '401': {$ref: '#/components/responses/Error'}
+        '503': {$ref: '#/components/responses/Error'}
+    post:
+      operationId: requestWithdrawal
+      summary: Request a withdrawal (session only, verified email, TOTP code in X-TOTP)
+      description: >-
+        Checks the destination format, the daily limit per asset and the TOTP code, holds the
+        funds and queues asynchronous screening. Amounts above the review threshold wait for an
+        administrator; smaller ones are paid automatically from the hot wallet.
+      parameters:
+        - {name: X-TOTP, in: header, required: true, schema: {type: string, pattern: '^[0-9]{6}$'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WithdrawalRequest'}
+      responses:
+        '201': {description: Accepted, content: {application/json: {schema: {$ref: '#/components/schemas/Withdrawal'}}}}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+        '503': {$ref: '#/components/responses/Error'}
+  /v1/withdrawals/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string}}
+    get:
+      operationId: getWithdrawal
+      summary: One of the caller's withdrawals
+      responses:
+        '200': {description: Withdrawal, content: {application/json: {schema: {$ref: '#/components/schemas/Withdrawal'}}}}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '503': {$ref: '#/components/responses/Error'}
   /v1/ledger:
     get:
       operationId: getLedger
@@ -503,6 +619,57 @@ paths:
         '400': {$ref: '#/components/responses/Error'}
         '404': {$ref: '#/components/responses/Error'}
         '503': {$ref: '#/components/responses/Error'}
+  /v1/admin/withdrawals/review:
+    get:
+      operationId: adminReviewQueue
+      summary: Withdrawals waiting for an administrator (above the threshold)
+      responses:
+        '200':
+          description: Review queue
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [withdrawals]
+                properties:
+                  withdrawals: {type: array, items: {$ref: '#/components/schemas/Withdrawal'}}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '503': {$ref: '#/components/responses/Error'}
+  /v1/admin/withdrawals/{id}/approve:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string}}
+    post:
+      operationId: adminApproveWithdrawal
+      summary: Approve a withdrawal in the review queue; it is then signed and broadcast
+      responses:
+        '200': {description: Approved, content: {application/json: {schema: {$ref: '#/components/schemas/Withdrawal'}}}}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /v1/admin/withdrawals/{id}/reject:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string}}
+    post:
+      operationId: adminRejectWithdrawal
+      summary: Reject a withdrawal in the review queue; the held funds are released
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                reason: {type: string}
+      responses:
+        '200': {description: Rejected, content: {application/json: {schema: {$ref: '#/components/schemas/Withdrawal'}}}}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
 components:
   securitySchemes:
     bearer: {type: http, scheme: bearer, bearerFormat: JWT}
@@ -581,6 +748,43 @@ components:
         maker_fee_bps: {type: integer}
         taker_fee_bps: {type: integer}
         status: {type: string, enum: [active, halted]}
+    Me:
+      type: object
+      required: [user_id, email, role, email_verified, totp_enabled, notify_order_fills]
+      properties:
+        user_id: {type: string}
+        email: {type: string}
+        role: {type: string}
+        email_verified: {type: boolean}
+        totp_enabled: {type: boolean}
+        notify_order_fills: {type: boolean}
+    WithdrawalRequest:
+      type: object
+      required: [chain, asset, amount, destination]
+      additionalProperties: false
+      properties:
+        chain: {type: string, enum: [btc, eth]}
+        asset: {type: string, enum: [BTC, ETH, USDT]}
+        amount: {type: string, example: '0.05'}
+        destination: {type: string}
+    Withdrawal:
+      type: object
+      required: [id, chain, asset, amount, destination, state, confirmations, created_at, updated_at]
+      properties:
+        id: {type: string}
+        user_id: {type: string, description: admin views only}
+        chain: {type: string}
+        asset: {type: string}
+        amount: {type: string}
+        destination: {type: string}
+        state:
+          type: string
+          enum: [requested, screening, pending_review, approved, signing, broadcast, confirmed, rejected, failed]
+        reason: {type: string}
+        txid: {type: string}
+        confirmations: {type: integer, format: int64}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
     DepositAddress:
       type: object
       required: [chain, address, assets]

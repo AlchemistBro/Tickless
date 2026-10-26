@@ -32,6 +32,7 @@ import (
 	ledgerv1 "github.com/tickless/pkg/gen/tickless/ledger/v1"
 	ordersv1 "github.com/tickless/pkg/gen/tickless/orders/v1"
 	walletv1 "github.com/tickless/pkg/gen/tickless/wallet/v1"
+	withdrawalsv1 "github.com/tickless/pkg/gen/tickless/withdrawals/v1"
 	"github.com/tickless/pkg/market"
 	"github.com/tickless/pkg/wshub"
 )
@@ -58,7 +59,9 @@ type Deps struct {
 	// Wallet and Chainwatcher serve deposits; nil answers those routes with 503.
 	Wallet       walletv1.WalletServiceClient
 	Chainwatcher chainwatcherv1.ChainwatcherServiceClient
-	Redis        redis.UniversalClient
+	// Withdrawals serves withdrawals; nil answers those routes with 503.
+	Withdrawals withdrawalsv1.WithdrawalsServiceClient
+	Redis       redis.UniversalClient
 	// PublicKey fetches the Ed25519 key that verifies access tokens.
 	PublicKey      func(context.Context) (ed25519.PublicKey, error)
 	Limits         Limits
@@ -263,6 +266,17 @@ func (s *Server) Routes() http.Handler {
 			r.Get("/ledger", s.ledgerEntries)
 			r.Get("/deposit-address", s.depositAddress)
 			r.Get("/deposits", s.listDeposits)
+			r.Get("/withdrawals", s.listWithdrawals)
+			r.Get("/withdrawals/{id}", s.getWithdrawal)
+			r.Group(func(r chi.Router) {
+				// Account security and moving funds out need a login session, never an API key.
+				r.Use(s.requireSession)
+				r.Get("/me", s.me)
+				r.Put("/me/notifications", s.setNotifications)
+				r.Post("/2fa/totp", s.enrollTOTP)
+				r.Post("/2fa/totp/confirm", s.confirmTOTP)
+				r.With(s.requireVerified).Post("/withdrawals", s.requestWithdrawal)
+			})
 			r.Get("/orders", s.listOrders)
 			r.Get("/orders/{id}", s.getOrder)
 			r.Group(func(r chi.Router) {
@@ -290,6 +304,9 @@ func (s *Server) Routes() http.Handler {
 			r.Get("/users/{id}/ledger", s.adminLedger)
 			r.Post("/markets/{symbol}/halt", s.adminHalt(true))
 			r.Post("/markets/{symbol}/resume", s.adminHalt(false))
+			r.Get("/withdrawals/review", s.adminReviewQueue)
+			r.Post("/withdrawals/{id}/approve", s.adminReview(true))
+			r.Post("/withdrawals/{id}/reject", s.adminReview(false))
 		})
 	})
 	return r

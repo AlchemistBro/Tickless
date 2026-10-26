@@ -218,6 +218,7 @@ type testEnv struct {
 	identity *fakeIdentity
 	orders   *fakeOrders
 	wallet   *fakeWallet
+	wd       *fakeWithdrawals
 	cw       *fakeChainwatcher
 	redis    *miniredis.Miniredis
 	rdb      *redis.Client
@@ -240,9 +241,9 @@ func newEnvSync(t *testing.T, limits httpapi.Limits, requireFrozenSync bool) *te
 	e.now.Store(time.Now().UnixNano())
 	e.identity = &fakeIdentity{keys: map[string]*identityv1.LookupAPIKeyResponse{}, pub: func() ed25519.PublicKey { return e.signer.PublicKey() }}
 	e.orders = &fakeOrders{}
-	e.wallet, e.cw = &fakeWallet{}, &fakeChainwatcher{}
+	e.wallet, e.cw, e.wd = &fakeWallet{}, &fakeChainwatcher{}, &fakeWithdrawals{}
 	e.srv = httpapi.New(httpapi.Deps{
-		Identity: e.identity, Ledger: fakeLedger{}, Orders: e.orders, Wallet: e.wallet, Chainwatcher: e.cw, Redis: rdb, Limits: limits,
+		Identity: e.identity, Ledger: fakeLedger{}, Orders: e.orders, Wallet: e.wallet, Chainwatcher: e.cw, Withdrawals: e.wd, Redis: rdb, Limits: limits,
 		AllowedOrigins: []string{"http://localhost:5173"}, RequireFrozenSync: requireFrozenSync, MarketData: "http://127.0.0.1:1",
 		PublicKey: func(context.Context) (ed25519.PublicKey, error) { return e.identity.pub(), nil },
 		Now:       func() time.Time { return time.Unix(0, e.now.Load()) },
