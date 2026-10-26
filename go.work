@@ -11,6 +11,7 @@ use (
 	./services/marketdata
 	./services/matching
 	./services/orders
+	./services/signer
 	./services/wallet
 	./services/withdrawals
 )
