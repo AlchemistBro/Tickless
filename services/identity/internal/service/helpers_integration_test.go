@@ -3,6 +3,7 @@
 package service_test
 
 import (
+	"encoding/base32"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -18,4 +19,9 @@ func decodeToken(t *testing.T, payload []byte) string {
 	require.NotNil(t, ev.GetSignedUp())
 	require.NotEmpty(t, ev.GetSignedUp().VerificationToken)
 	return ev.GetSignedUp().VerificationToken
+}
+
+// totpDecode reverses totp.Encode (base32, no padding) for test code generation.
+func totpDecode(s string) ([]byte, error) {
+	return base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(s)
 }
