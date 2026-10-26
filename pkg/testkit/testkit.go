@@ -91,3 +91,34 @@ func ClickHouse(t testing.TB) (addr, user, password, database string) {
 	}
 	return host + ":" + port.Port(), "test", "test", "test"
 }
+
+// Bitcoind starts a bitcoind regtest node with wallet support and returns its
+// JSON-RPC URL and credentials (local test credentials, not a secret).
+func Bitcoind(t testing.TB) (url, user, password string) {
+	t.Helper()
+	ctx := context.Background()
+	user, password = "tickless", "tickless"
+	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        "ruimarinho/bitcoin-core:24",
+			ExposedPorts: []string{"18443/tcp"},
+			Cmd: []string{"-regtest=1", "-server=1", "-printtoconsole=1", "-rpcbind=0.0.0.0", "-rpcallowip=0.0.0.0/0",
+				"-rpcuser=" + user, "-rpcpassword=" + password, "-fallbackfee=0.0002", "-txindex=1"},
+			WaitingFor: wait.ForLog("init message: Done loading").WithStartupTimeout(2 * time.Minute),
+		},
+		Started: true,
+	})
+	if err != nil {
+		t.Fatalf("start bitcoind: %v", err)
+	}
+	t.Cleanup(func() { _ = testcontainers.TerminateContainer(c) })
+	host, err := c.Host(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	port, err := c.MappedPort(ctx, "18443/tcp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return "http://" + host + ":" + port.Port(), user, password
+}
