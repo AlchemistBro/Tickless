@@ -12,4 +12,5 @@ use (
 	./services/matching
 	./services/orders
 	./services/wallet
+	./services/withdrawals
 )
