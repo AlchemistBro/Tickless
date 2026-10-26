@@ -63,10 +63,18 @@ type posting struct {
 type Store struct {
 	pool *pgxpool.Pool
 	ids  sync.Map // acctKey -> int64 (accounts are immutable once created)
+	// slots bounds concurrent sessions to half the pool. A session holds its
+	// transaction's connection and, on an account-cache miss, briefly needs a
+	// second one (accountID runs outside the transaction). Without the bound,
+	// MaxConns sessions that all miss the cache would each hold one connection
+	// and wait forever for another.
+	slots chan struct{}
 }
 
 // New returns a Store on pool.
-func New(pool *pgxpool.Pool) *Store { return &Store{pool: pool} }
+func New(pool *pgxpool.Pool) *Store {
+	return &Store{pool: pool, slots: make(chan struct{}, max(1, pool.Config().MaxConns/2))}
+}
 
 // accountID resolves (and lazily creates) an account outside any transaction,
 // so a rolled back business transaction never invalidates the cache.
@@ -104,6 +112,12 @@ type session struct {
 // inSession runs f in a transaction, then publishes BalanceChanged events for
 // every touched user balance via the outbox (same transaction) and commits.
 func (s *Store) inSession(ctx context.Context, reason string, f func(ss *session) error) error {
+	select {
+	case s.slots <- struct{}{}:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	defer func() { <-s.slots }()
 	return pg.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		ss := &session{s: s, tx: tx, touched: map[userAsset]struct{}{}}
 		if err := f(ss); err != nil {
@@ -339,6 +353,37 @@ func (s *Store) Credit(ctx context.Context, businessKey string, user int64, asse
 		}
 		var applied bool
 		entryID, applied, err = ss.post(ctx, "credit:"+businessKey, "credit", []posting{
+			{available(user, asset), amount}, {acctKey{SystemUser, asset, KindExternal}, neg},
+		})
+		already = !applied
+		return err
+	})
+	return entryID, already, err
+}
+
+// DepositKey is the business key of an on-chain deposit: one journal entry
+// per (chain, txid, index), so a deposit is credited at most once however
+// often its CONFIRMED event is delivered (SPEC §6 invariant 4).
+func DepositKey(chain, txid string, index int64) string {
+	return fmt.Sprintf("deposit:%s:%s:%d", chain, txid, index)
+}
+
+// Deposit credits a confirmed on-chain deposit to the user against the
+// EXTERNAL account (journal kind "deposit"). Idempotent by DepositKey.
+func (s *Store) Deposit(ctx context.Context, chain, txid string, index int64, user int64, asset string, amount money.Int128) (entryID int64, already bool, err error) {
+	if amount.Sign() <= 0 {
+		return 0, false, ErrInvalidAmount
+	}
+	if _, ok := money.LookupAsset(asset); !ok {
+		return 0, false, fmt.Errorf("%w: unknown asset %q", ErrInvalidAmount, asset)
+	}
+	err = s.inSession(ctx, "deposit", func(ss *session) error {
+		neg, err := amount.Neg()
+		if err != nil {
+			return err
+		}
+		var applied bool
+		entryID, applied, err = ss.post(ctx, DepositKey(chain, txid, index), "deposit", []posting{
 			{available(user, asset), amount}, {acctKey{SystemUser, asset, KindExternal}, neg},
 		})
 		already = !applied
