@@ -289,3 +289,45 @@ func (s *server) AdminCredit(ctx context.Context, r *ledgerv1.AdminCreditRequest
 	}
 	return &ledgerv1.AdminCreditResponse{AlreadyApplied: already, EntryId: id}, nil
 }
+
+func mapWithdrawalErr(err error) error {
+	switch {
+	case errors.Is(err, store.ErrWithdrawalNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	case errors.Is(err, store.ErrWithdrawalFinished):
+		return status.Error(codes.FailedPrecondition, err.Error())
+	default:
+		return mapErr(err)
+	}
+}
+
+func (s *server) HoldWithdrawal(ctx context.Context, r *ledgerv1.HoldWithdrawalRequest) (*ledgerv1.HoldWithdrawalResponse, error) {
+	amt, err := amount(r.Amount)
+	if err != nil {
+		return nil, err
+	}
+	if r.WithdrawalId <= 0 || r.UserId <= 0 || r.Asset == "" {
+		return nil, status.Error(codes.InvalidArgument, "withdrawal_id, user_id and asset are required")
+	}
+	already, err := s.st.HoldWithdrawal(ctx, r.WithdrawalId, r.UserId, r.Asset, amt)
+	if err != nil {
+		return nil, mapWithdrawalErr(err)
+	}
+	return &ledgerv1.HoldWithdrawalResponse{AlreadyApplied: already}, nil
+}
+
+func (s *server) SettleWithdrawal(ctx context.Context, r *ledgerv1.SettleWithdrawalRequest) (*ledgerv1.SettleWithdrawalResponse, error) {
+	already, err := s.st.SettleWithdrawal(ctx, r.WithdrawalId)
+	if err != nil {
+		return nil, mapWithdrawalErr(err)
+	}
+	return &ledgerv1.SettleWithdrawalResponse{AlreadyApplied: already}, nil
+}
+
+func (s *server) ReleaseWithdrawal(ctx context.Context, r *ledgerv1.ReleaseWithdrawalRequest) (*ledgerv1.ReleaseWithdrawalResponse, error) {
+	already, err := s.st.ReleaseWithdrawal(ctx, r.WithdrawalId)
+	if err != nil {
+		return nil, mapWithdrawalErr(err)
+	}
+	return &ledgerv1.ReleaseWithdrawalResponse{AlreadyApplied: already}, nil
+}
