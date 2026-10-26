@@ -72,6 +72,9 @@ func TestResponsesConformToSpec(t *testing.T) {
 	doc := loadSpec(t)
 	router, err := gorillamux.NewRouter(doc)
 	require.NoError(t, err)
+	// The router matches the documented server URL, so requests are built against it.
+	require.NotEmpty(t, doc.Servers, "spec must declare a server")
+	base := strings.TrimSuffix(doc.Servers[0].URL, "/")
 	e := newEnv(t, generousLimits)
 	admin, user := bearer(e.token(1, "admin")), bearer(e.token(2, "user"))
 	e.identity.keys["x"] = &identityv1.LookupAPIKeyResponse{}
@@ -103,7 +106,7 @@ func TestResponsesConformToSpec(t *testing.T) {
 		rec := e.do(tc.method, tc.path, tc.body, tc.hdr)
 		require.Equal(t, tc.wantStatus, rec.Code, "%s %s: %s", tc.method, tc.path, rec.Body.String())
 
-		req := httptest.NewRequest(tc.method, "http://localhost:8080"+tc.path, nil)
+		req := httptest.NewRequest(tc.method, base+tc.path, nil)
 		route, pathParams, err := router.FindRoute(req)
 		require.NoError(t, err, "%s %s must be documented", tc.method, tc.path)
 		input := &openapi3filter.ResponseValidationInput{
