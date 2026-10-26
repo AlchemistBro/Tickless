@@ -1,99 +1,185 @@
+<div align="center">
+
 # Tickless
 
-A self-hostable spot crypto exchange in Go (regtest / local devnets only). Spec: [SPEC.md](SPEC.md). Status: [PROGRESS.md](PROGRESS.md).
+Self-hostable спот-биржа криптовалют на Go. Только regtest и локальные девнеты, никаких mainnet.
 
-**Current state: Phase 4** — users can sign up, trade over REST or in the **web terminal** against seeded balances; every fill is settled in a double-entry ledger; market data (order book, trades, ticker, candles) is served over REST and WebSocket. Services: `gateway`, `identity`, `orders`, `matching`, `ledger`, `marketdata`, `candles` on PostgreSQL + Kafka + Redis + ClickHouse, traced end to end.
+**[SPEC.md](SPEC.md)** · **[PROGRESS.md](PROGRESS.md)** · [Быстрый старт](#быстрый-старт) · [Возможности](#возможности) · [Архитектура](#архитектура) · [Тесты](#тестирование) · [ADR](#архитектурные-решения)
 
-```
- client --REST/HMAC--> gateway --gRPC--> identity   (users, JWT, API keys)
-                          |  \--gRPC--> orders --PlaceHold(gRPC)--> ledger
-                          |               | outbox (same tx as the order)
-                          |               v
-                          |        Kafka matching.commands --> matching (engine per partition, checkpoints)
-                          |                                        | Kafka matching.events
-                          |                  +---------------------+----------------------+
-                          |                  v                                            v
-                          \--gRPC--> ledger (settle trades, release holds)     orders (fills, status)
-                                           | outbox -> ledger.events
-```
+<br />
 
-## Quickstart
-```
-make up      # Postgres+pgbouncer, Redis, Kafka (KRaft), RabbitMQ, ClickHouse, OTel, Jaeger, Prometheus, Alertmanager, Grafana, Mailpit
-make test    # unit tests with -race (uses a golang container when no C compiler is available)
-make lint    # golangci-lint + buf lint
-make fuzz    # fuzz targets: pkg/money, matching engine
-make bench   # matching engine vs SPEC §5 targets (PASS/FAIL) + pprof
-make test-integration  # testcontainers: PostgreSQL + Kafka per service
-make e2e     # black-box suite against the running stack
-make chaos-dup         # every Kafka message published twice; scenarios must still end identical
-make down
-make seed EMAIL=me@example.com ASSET=USDT AMOUNT=100000   # dev only: give a registered user funds
-make web-dev   # hot-reloading terminal on :5173 (proxies to the gateway)
-make web-test  # typecheck + unit tests of the terminal
-```
-| UI | URL |
+![Go](https://img.shields.io/badge/Go-1.27-00ADD8?style=for-the-badge&logo=go&logoColor=white)
+![Kafka](https://img.shields.io/badge/Kafka-KRaft-231F20?style=for-the-badge&logo=apachekafka&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+![ClickHouse](https://img.shields.io/badge/ClickHouse-24.8-FFCC01?style=for-the-badge&logo=clickhouse&logoColor=black)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+
+</div>
+
+---
+
+## Статус
+
+**Фаза 4 из 11.** Регистрация, вход, API-ключи с HMAC-подписью, ордера REST и WebSocket, сверка в двойной записи (ledger), рыночные данные и свечи, веб-терминал на widget-сетке. Фаза 5 (депозиты, регтест BTC и Anvil с тестовым USDT) в работе: план в [PROGRESS.md](PROGRESS.md), протоколы `wallet` и `chainwatcher` закоммичены.
+
+Что проверено, что нет, подробно в [PROGRESS.md](PROGRESS.md) с командами и выводами. Здесь только то, что уже есть доказательство.
+
+---
+
+## Возможности
+
+| | |
 |---|---|
-| **Web terminal** | http://localhost:8088 |
-| Grafana | http://localhost:3000 (admin/admin) |
+| **Аккаунты** | регистрация, вход, JWT, API-ключи с HMAC-подписью, подтверждение почты (для локальной сборки отключено до фазы 6) |
+| **Ордера** | лимитные и рыночные, GTC / IOC / FOK, post-only, отмена, отмена всех по рынку, `client_order_id` для идемпотентности |
+| **Баланс** | доступный и заблокированный остаток по активам, полная история проводок |
+| **Рыночные данные** | REST и публичный WebSocket: стакан (snapshot + delta с `seq` и `prev`), сделки, тикер, свечи 1m–1d |
+| **Приватный WebSocket** | собственные ордера, исполнения и балансы, фильтр по пользователю |
+| **Терминал** | React + TypeScript + Vite, панели-виджеты, каждая панель один файл |
+| **Наблюдаемость** | OpenTelemetry, Jaeger, Prometheus, Grafana, трассы через Kafka и outbox |
+
+---
+
+## Быстрый старт
+
+Нужны Docker Desktop и Go 1.27. Для `make test` без gcc используется контейнер `golang:1.27`.
+
+```bash
+make up          # стек: Postgres+pgbouncer, Redis, Kafka (KRaft), RabbitMQ, ClickHouse, OTel, Jaeger, Prometheus, Grafana, Mailpit
+make test        # юнит-тесты с -race по всем модулям
+make lint        # golangci-lint + buf lint
+make fuzz        # fuzz: pkg/money, движок матчинга
+make bench       # движок против целей SPEC §5 (PASS/FAIL) и pprof
+make e2e         # сквозной набор против запущенного make up
+make down
+```
+
+| Интерфейс | Адрес |
+|---|---|
+| Веб-терминал | http://localhost:8088 |
+| Grafana | http://localhost:3000 (admin / admin) |
 | Jaeger | http://localhost:16686 |
-| Prometheus / Alertmanager | :9090 / :9093 |
+| Prometheus | http://localhost:9090 |
 | Mailpit | http://localhost:8025 |
-| RabbitMQ | http://localhost:15672 (tickless/tickless) |
+| RabbitMQ | http://localhost:15672 (tickless / tickless) |
 
-All credentials are local-development placeholders. Host ports: gateway `:8080`, Postgres `:5433` (5432 is often taken by a local install), ledger gRPC `:9101` (dev seeding).
+Все учётные данные здесь заглушки для локальной разработки. Порт Postgres на хосте `5433`, потому что `5432` часто занят локальной установкой.
 
-## Try it (curl)
+### Пример через curl
+
 ```bash
 curl -s localhost:8080/v1/markets | jq
 curl -s -XPOST localhost:8080/v1/auth/signup -d '{"email":"me@example.com","password":"correct horse battery"}'
 TOKEN=$(curl -s -XPOST localhost:8080/v1/auth/login -d '{"email":"me@example.com","password":"correct horse battery"}' | jq -r .access_token)
 curl -s -XPOST localhost:8080/v1/orders -H "Authorization: Bearer $TOKEN" \
-  -d '{"market":"BTC-USDT","side":"buy","type":"limit","price":"50000.00","quantity":"0.1"}'   # 422 until you have funds
+  -d '{"market":"BTC-USDT","side":"buy","type":"limit","price":"50000.00","quantity":"0.1"}'
 ```
-Balances can be seeded in development through the ledger AdminCredit RPC (`LEDGER_ALLOW_SEED=true` in compose; see `e2e/harness_test.go`). Dev-only switches are all flagged `DEV ONLY` in `deploy/compose/docker-compose.yml`: `LEDGER_ALLOW_SEED`, `IDENTITY_AUTO_VERIFY` (until the notifier delivers mail in Phase 6) and ephemeral signing/encryption keys.
 
-The public API is specified in [api/openapi/openapi.yaml](api/openapi/openapi.yaml); a unit test keeps it in lockstep with the router and validates real responses against it. Kafka topics and schemas: [docs/events.md](docs/events.md). Invariants and the tests that prove them: [docs/invariants.md](docs/invariants.md).
+Без средств заказ вернёт 422. Баланс для разработки выдаётся через `make seed EMAIL=... ASSET=USDT AMOUNT=100000` (RPC `AdminCredit`, включается `LEDGER_ALLOW_SEED=true`). Все dev-переключатели помечены `DEV ONLY` в [deploy/compose/docker-compose.yml](deploy/compose/docker-compose.yml).
 
-## The terminal is made of widgets
-The UI in [web/](web/) is a grid of **widgets**; each panel (chart, order book, trades, order entry, balances, ...) is one small file in `web/src/widgets/` and is discovered automatically. To add a panel, describe it to an AI assistant (or write it yourself) following [web/WIDGETS.md](web/WIDGETS.md); it appears in the **Widgets** menu, can be dragged and resized, and a malformed widget is rejected without breaking the others. The WebSocket protocol it uses is specified in [docs/websocket.md](docs/websocket.md).
+---
 
-## Architecture decisions
-- [0001 Money representation](docs/adr/0001-money-representation.md)
-- [0002 Matching engine concurrency model and book structure](docs/adr/0002-matching-engine-concurrency-model.md)
-- [0003 Event log and recovery](docs/adr/0003-event-log-and-recovery.md)
-- [0004 Idempotent engine commands](docs/adr/0004-idempotent-engine-commands.md)
-- [0005 Transactional outbox and idempotent consumers](docs/adr/0005-transactional-outbox.md)
-- [0006 Order placement saga, holds and rounding](docs/adr/0006-order-placement-saga-holds-and-rounding.md)
-- [0007 Kafka vs RabbitMQ](docs/adr/0007-kafka-vs-rabbitmq.md)
-- [0008 Why ClickHouse](docs/adr/0008-why-clickhouse.md)
+## Архитектура
 
-## Matching engine results (`make bench`, Linux, Core Ultra 7 155H)
-| Target (SPEC §5) | Result |
+Система состоит из сервисов на Go. Каждый сервис владеет своей базой PostgreSQL, сервисы не читают чужие таблицы. Межсервисные команды идут по gRPC, события по Kafka через transactional outbox.
+
+![Контекст и контейнеры: as-is](docs/c4/02_services_as_is.png)
+
+| Сервис | Ответственность |
 |---|---|
-| ≥ 1M cmd/s single market | ~6.5 M cmd/s (mixed add/cancel/match, ~20k resting orders) |
-| p99 < 20 µs | ~0.5 µs |
-| 0 allocs/op after warm-up | 0 mallocs in 5,000,000 commands |
+| `gateway` | публичный REST и WebSocket, JWT и HMAC, rate limit в Redis, idempotency |
+| `identity` | пользователи, пароли (argon2id), API-ключи, роли |
+| `orders` | проверка ордеров по правилам рынка, hold через ledger, запись команд в outbox |
+| `matching` | один детерминированный движок на рынок, вход `matching.commands`, выход `matching.events`, снапшоты |
+| `ledger` | двойная запись, холды, расчёт сделок и комиссий, балансы никогда не уходят в минус |
+| `marketdata` | стакан, тикер, сделки, снапшоты в Redis, публичный WebSocket |
+| `candles` | Kafka → ClickHouse, материализованные представления OHLCV |
+| `wallet` *(фаза 5, в работе)* | адреса депозита из xpub, без приватных ключей |
+| `chainwatcher` *(фаза 5, в работе)* | сканеры BTC и ETH, подтверждения, обработка реорганизаций |
 
-Details, profiles and the known worst case (100k levels, ~30 µs): [docs/perf/engine](docs/perf/engine/README.md).
+Подробные схемы C4 (развёртывание и сервисы, как есть и как должно быть) лежат в [docs/c4/](docs/c4/). Исходники `.drawio` открываются в draw.io.
 
-## Market data results (local stack)
-| Target (SPEC §5 / phase 4) | Result |
+### Жизненный цикл ордера
+
+Диаграмма в стиле StarUML (sequence diagram), сгенерирована из кода, а не нарисована вручную: [docs/diagrams/order-sequence.svg](docs/diagrams/order-sequence.svg).
+
+![Жизненный цикл ордера](docs/diagrams/order-sequence.svg)
+
+Порядок событий: `ACCEPTED`, затем `TRADE` и `BOOK_DELTA` по уровням, затем терминальный `CANCELLED` или итоговая `BOOK_DELTA`. Повторный запуск команд даёт идентичные события (ADR 0003).
+
+### Стек
+
+**Бэкенд:** Go 1.27, go.work, pgx v5, sqlc, goose, go-redis v9, franz-go, clickhouse-go v2, gRPC + Protobuf (buf), chi, coder/websocket
+
+**Инфраструктура:** PostgreSQL 16 + pgbouncer, Redis 7, Kafka (KRaft), RabbitMQ 4, ClickHouse 24.8, OpenTelemetry Collector, Jaeger, Prometheus, Grafana, Alertmanager
+
+**Фронтенд:** React 19, TypeScript, Vite, lightweight-charts, react-grid-layout
+
+---
+
+## Тестирование
+
+| Команда | Что проверяет |
 |---|---|
-| WS client rebuilds the exact book from snapshot + deltas | proven against the engine after every command and over a real socket |
-| Candles for all intervals equal the trades | proven against an independent aggregation, also under duplicate Kafka delivery |
-| Book delta visible on WS < 100 ms (p99) | **9.3 ms** (Kafka timestamp -> socket write, Prometheus histogram) |
+| `make test` | юнит-тесты всех модулей с `-race`, покрытие |
+| `make test-integration` | testcontainers: PostgreSQL, Kafka, ClickHouse |
+| `make lint` | golangci-lint, buf lint, promtool для правил алертов |
+| `make bench` | движок против целей SPEC §5 |
+| `make e2e` | сквозной сценарий против `make up` |
+| `make chaos-dup` | каждое сообщение Kafka публикуется дважды; итоги должны совпасть |
 
-## Known limitations (so far)
-- Candles are published live best-effort over `candles.live`; the REST history from ClickHouse is the exact source.
-- Public market data is served from memory by `marketdata`; an instance needs the Redis snapshot (or a full replay of `matching.events`) to start.
-- The private WebSocket authenticates with an access token (no API-key signing) and carries live events only.
-- A poison event stalls ONE partition of its consumer group (alert `ConsumerPartitionStalled`, runbook in `docs/runbooks/`); the ledger records it in `settlement_failures` and never skips it. Operators resolve it explicitly.
-- Matching refuses to start (instead of guessing) if its command log was truncated, its checkpoints cannot be restored or the partition count changed. In local development after such a change, reset the stack with `make down` (removes volumes).
-- A transient handler error (e.g. database down) retries with backoff and blocks the other partitions of that consumer while it lasts.
-- A duplicate `PlaceOrder` delayed by more than 262,144 commands is not detected by the engine; it cannot double-settle but stalls the ledger partition (ADR 0004).
-- The frozen-user set and API-key lookups are cached (Redis / 30 s in the gateway): revoking an API key can take up to 30 s on other gateway instances.
-- Deposits, withdrawals, notifications, reconciliation, Kubernetes and the web UI are later phases (see [PROGRESS.md](PROGRESS.md)).
-- Email verification is bypassed in the local stack (`IDENTITY_AUTO_VERIFY=true`) until the notifier exists; the verification token is already published on `users.events`.
-- Postings/orders are not yet partitioned by month (Phase 9, with EXPLAIN evidence).
-- Single-node Kafka/PostgreSQL locally; no replication.
+Последний прогон `make test` (контейнер `golang:1.27`, `-race`): все 9 модулей, 14 пакетов с `ok`, падений нет. Вывод сохранён в scratchpad сессии, в репозиторий не коммитится.
+
+Что **не** подтверждено в этом README: `make lint`, `make up`, `make e2e` на текущем коммите в этом прогоне не запускались. Их результаты будут в [PROGRESS.md](PROGRESS.md), когда пройдут.
+
+---
+
+## Результаты движка (`make bench`, Linux)
+
+| Цель SPEC §5 | Результат |
+|---|---|
+| ≥ 1 млн команд/с, один рынок | ~6.5 млн команд/с (смесь add/cancel/match) |
+| p99 < 20 мкс | ~0.5 мкс |
+| 0 аллокаций после прогрева | 0 mallocs на 5 000 000 команд |
+
+Подробности, профили и худший случай (100k уровней, ~30 мкс): [docs/perf/engine](docs/perf/engine/README.md).
+
+## Рыночные данные (локальный стек)
+
+| Цель | Результат |
+|---|---|
+| Клиент WebSocket восстанавливает стакан точно | проверено против движка после каждой команды и по настоящему сокету |
+| Свечи всех интервалов равны сделкам | проверено независимой агрегацией, в т.ч. при дублях Kafka |
+| Задержка доставки дельты стакана p99 < 100 мс | **9.3 мс** (метка времени Kafka → запись в сокет) |
+
+---
+
+## Архитектурные решения
+
+- [0001 Представление денег](docs/adr/0001-money-representation.md)
+- [0002 Модель конкурентности движка](docs/adr/0002-matching-engine-concurrency-model.md)
+- [0003 Журнал событий и восстановление](docs/adr/0003-event-log-and-recovery.md)
+- [0004 Идемпотентные команды движка](docs/adr/0004-idempotent-engine-commands.md)
+- [0005 Transactional outbox](docs/adr/0005-transactional-outbox.md)
+- [0006 Сага размещения ордера, холды, округление](docs/adr/0006-order-placement-saga-holds-and-rounding.md)
+- [0007 Kafka или RabbitMQ](docs/adr/0007-kafka-vs-rabbitmq.md)
+- [0008 Почему ClickHouse](docs/adr/0008-why-clickhouse.md)
+
+Инварианты и тесты, которые их доказывают: [docs/invariants.md](docs/invariants.md). Протокол WebSocket: [docs/websocket.md](docs/websocket.md). Схемы событий: [docs/events.md](docs/events.md). Публичный API: [api/openapi/openapi.yaml](api/openapi/openapi.yaml).
+
+---
+
+## Известные ограничения
+
+- Свечи в `candles.live` публикуются с лучшим усилием; точный источник истории это ClickHouse.
+- Рыночные данные отдаёт `marketdata` из памяти. Чтобы подняться, инстанс нужен снапшот из Redis или полный replay `matching.events`.
+- Приватный WebSocket аутентифицируется access-токеном, без подписи API-ключом, и отдаёт только живые события.
+- Ядовитое событие останавливает один раздел своей группы потребителей. Оно записывается в `settlement_failures` и никогда не пропускается; оператор решает вручную.
+- Движок отказывается стартовать, если журнал команд обрезан, чекпоинты не восстанавливаются или число разделов изменилось. Для локальной разработки: `make down` (удаляет тома).
+- Дубль `PlaceOrder`, задержанный более чем на 262 144 команды, движок не обнаруживает. Двойного списания не будет, но раздел ledger встанет (ADR 0004).
+- Кэш заблокированных пользователей и API-ключей в gateway живёт до 30 с: отзыв ключа на других инстансах может занять до 30 с.
+- Депозиты, выводы, уведомления, сверка, Kubernetes и админка это следующие фазы ([PROGRESS.md](PROGRESS.md)).
+- Подтверждение почты в локальной сборке отключено (`IDENTITY_AUTO_VERIFY=true`) до появления notifier.
+- Postgres и Kafka локально в одном экземпляре, без репликации.
+
