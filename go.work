@@ -10,4 +10,5 @@ use (
 	./services/marketdata
 	./services/matching
 	./services/orders
+	./services/wallet
 )
