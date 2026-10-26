@@ -8,7 +8,7 @@ All messages are Protobuf (`api/proto`, generated into `pkg/gen`). Every record 
 | `matching.events` | market | matching | `matching.v1.Event` | ledger, orders, candles (consumer groups); marketdata and the gateway private feed (own offsets / live) |
 | `ledger.events` | user id | ledger (outbox) | `ledger.v1.BalanceChanged` | gateway private WS |
 | `users.events` | user id | identity (outbox) | `users.v1.UserEvent` (oneof `signed_up`, `frozen`) | gateway (frozen set), notifier (P6) |
-| `deposits.events` | user id | chainwatcher (P5) | planned | ledger, notifier |
+| `deposits.events` | user id | chainwatcher (outbox) | `chainwatcher.v1.DepositEvent` | ledger (group `ledger-deposits`), notifier (P6) |
 | `withdrawals.events` | user id | withdrawals (P6) | planned | ledger, notifier |
 | `candles.live` | market | candles | `candles.v1.CandleUpdate` | marketdata (public WS `candles.*`) |
 
@@ -42,3 +42,7 @@ Event order for a command: `ACCEPTED`, then per level swept `TRADE`* + one `BOOK
 
 ## candles.v1.CandleUpdate
 `meta`, `market`, `interval` (`1m 5m 15m 1h 4h 1d`), `candle` {`open_time_unix`, `open/high/low/close` (ticks), `volume_lots`, `turnover` (tick-lots, decimal string), `trades`}. Always the complete current state of that candle; published after each ClickHouse insert (best effort, see ADR 0008). The candles service dedupes trades by `(market, trade_id)` before inserting.
+
+## chainwatcher.v1.DepositEvent
+`meta`, `type` (`DETECTED` seen in a block below the threshold, `CONFIRMED` threshold reached, `REORGED` its block left the chain before the threshold), `user_id`, `chain` (`btc`, `eth`), `txid`, `index` (BTC vout, ERC-20 log index, `-1` for the value of an ETH transaction), `asset`, `amount` (smallest units), `address`, `block_height`, `block_hash`, `confirmations`.
+A deposit can go `DETECTED -> REORGED -> DETECTED` (mined again on the new branch) and ends `CONFIRMED` at most once. The ledger credits on `CONFIRMED` only, with business key `deposit:{chain}:{txid}:{index}`; see ADR 0010.

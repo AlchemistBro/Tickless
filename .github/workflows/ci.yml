@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        module: [pkg, services/matching, services/ledger, services/identity, services/orders, services/gateway, services/marketdata, services/candles, e2e]
+        module: [pkg, services/matching, services/ledger, services/identity, services/orders, services/gateway, services/marketdata, services/candles, services/wallet, services/chainwatcher, e2e]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -51,7 +51,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with: {go-version-file: "${{ env.GO_VERSION_FILE }}"}
-      - name: "Integration tests (testcontainers - PostgreSQL, Kafka, ClickHouse) with coverage"
+      - name: "Integration tests (testcontainers - PostgreSQL, Kafka, ClickHouse, bitcoind regtest, Anvil) with coverage"
         run: make test-integration
 
   web:

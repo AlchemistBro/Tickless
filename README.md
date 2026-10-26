@@ -21,7 +21,7 @@ Self-hostable спот-биржа криптовалют на Go. Только r
 
 ## Статус
 
-**Фаза 4 из 11.** Регистрация, вход, API-ключи с HMAC-подписью, ордера REST и WebSocket, сверка в двойной записи (ledger), рыночные данные и свечи, веб-терминал на widget-сетке. Фаза 5 (депозиты, регтест BTC и Anvil с тестовым USDT) в работе: план в [PROGRESS.md](PROGRESS.md), протоколы `wallet` и `chainwatcher` закоммичены.
+**Фаза 5 из 11.** Регистрация, вход, API-ключи с HMAC-подписью, ордера REST и WebSocket, сверка в двойной записи (ledger), рыночные данные и свечи, веб-терминал на widget-сетке и **депозиты**: BTC на regtest, ETH и тестовый ERC-20 USDT на Anvil, с подтверждениями и обработкой реорганизаций. Дальше фаза 6 (выводы и уведомления), план в [PROGRESS.md](PROGRESS.md).
 
 Что проверено, что нет, подробно в [PROGRESS.md](PROGRESS.md) с командами и выводами. Здесь только то, что уже есть доказательство.
 
@@ -33,6 +33,7 @@ Self-hostable спот-биржа криптовалют на Go. Только r
 |---|---|
 | **Аккаунты** | регистрация, вход, JWT, API-ключи с HMAC-подписью, подтверждение почты (для локальной сборки отключено до фазы 6) |
 | **Ордера** | лимитные и рыночные, GTC / IOC / FOK, post-only, отмена, отмена всех по рынку, `client_order_id` для идемпотентности |
+| **Депозиты** | свой адрес на каждую цепь (выведен из xpub, без приватных ключей), ожидающие депозиты с числом подтверждений, зачисление после порога (BTC 2, ETH 12), реорг до порога никогда не зачисляет |
 | **Баланс** | доступный и заблокированный остаток по активам, полная история проводок |
 | **Рыночные данные** | REST и публичный WebSocket: стакан (snapshot + delta с `seq` и `prev`), сделки, тикер, свечи 1m–1d |
 | **Приватный WebSocket** | собственные ордера, исполнения и балансы, фильтр по пользователю |
@@ -95,8 +96,8 @@ curl -s -XPOST localhost:8080/v1/orders -H "Authorization: Bearer $TOKEN" \
 | `ledger` | двойная запись, холды, расчёт сделок и комиссий, балансы никогда не уходят в минус |
 | `marketdata` | стакан, тикер, сделки, снапшоты в Redis, публичный WebSocket |
 | `candles` | Kafka → ClickHouse, материализованные представления OHLCV |
-| `wallet` *(фаза 5, в работе)* | адреса депозита из xpub, без приватных ключей |
-| `chainwatcher` *(фаза 5, в работе)* | сканеры BTC и ETH, подтверждения, обработка реорганизаций |
+| `wallet` | адреса депозита из xpub (BIP84 для BTC, BIP44 для ETH), без приватных ключей; адрес выдаётся только после регистрации в chainwatcher |
+| `chainwatcher` | сканеры bitcoind и Anvil, подтверждения, откат к общему предку при реорге, события `deposits.events` через outbox |
 
 Подробные схемы C4 (развёртывание и сервисы, как есть и как должно быть) лежат в [docs/c4/](docs/c4/). Исходники `.drawio` открываются в draw.io.
 
@@ -155,6 +156,27 @@ curl -s -XPOST localhost:8080/v1/orders -H "Authorization: Bearer $TOKEN" \
 
 ---
 
+## Депозиты (локальный стек)
+
+| Цель | Результат |
+|---|---|
+| Зачисление ≤ 10 с после порога подтверждений (SPEC §5) | **~0,5 с** для BTC и ETH (e2e меряет от блока, давшего порог, до баланса в API) |
+| Депозит зачисляется не больше одного раза (инвариант 4) | 300 случайных историй цепи с реоргами, перезапусками и сбоями до и после COMMIT, тот же набор на PostgreSQL; дубли каждого Kafka-сообщения в `make chaos-dup` |
+| Реорг до порога не зачисляет (инвариант 5) | принудительный реорг на 3 блока на настоящем bitcoind regtest и на живом стеке; после повторного майнинга транзакции депозит зачисляется ровно один раз |
+
+### Попробовать депозит руками
+
+```bash
+TOKEN=...   # access_token из /v1/auth/login
+curl -s "localhost:18080/v1/deposit-address?chain=btc" -H "Authorization: Bearer $TOKEN"
+# отправить 0.1 BTC с кошелька-крана regtest и намайнить 2 блока
+docker compose -f deploy/compose/docker-compose.yml exec bitcoind bitcoin-cli -regtest -rpcuser=tickless -rpcpassword=tickless -rpcwallet=faucet sendtoaddress <адрес> 0.1
+docker compose -f deploy/compose/docker-compose.yml exec bitcoind bitcoin-cli -regtest -rpcuser=tickless -rpcpassword=tickless -rpcwallet=faucet -generate 2
+curl -s localhost:18080/v1/deposits -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
 ## Архитектурные решения
 
 - [0001 Представление денег](docs/adr/0001-money-representation.md)
@@ -165,6 +187,8 @@ curl -s -XPOST localhost:8080/v1/orders -H "Authorization: Bearer $TOKEN" \
 - [0006 Сага размещения ордера, холды, округление](docs/adr/0006-order-placement-saga-holds-and-rounding.md)
 - [0007 Kafka или RabbitMQ](docs/adr/0007-kafka-vs-rabbitmq.md)
 - [0008 Почему ClickHouse](docs/adr/0008-why-clickhouse.md)
+- [0009 Деривация адресов депозита](docs/adr/0009-deposit-address-derivation.md)
+- [0010 Сканирование цепей и реорги](docs/adr/0010-reorg-handling.md)
 
 Инварианты и тесты, которые их доказывают: [docs/invariants.md](docs/invariants.md). Протокол WebSocket: [docs/websocket.md](docs/websocket.md). Схемы событий: [docs/events.md](docs/events.md). Публичный API: [api/openapi/openapi.yaml](api/openapi/openapi.yaml).
 
@@ -179,7 +203,8 @@ curl -s -XPOST localhost:8080/v1/orders -H "Authorization: Bearer $TOKEN" \
 - Движок отказывается стартовать, если журнал команд обрезан, чекпоинты не восстанавливаются или число разделов изменилось. Для локальной разработки: `make down` (удаляет тома).
 - Дубль `PlaceOrder`, задержанный более чем на 262 144 команды, движок не обнаруживает. Двойного списания не будет, но раздел ledger встанет (ADR 0004).
 - Кэш заблокированных пользователей и API-ключей в gateway живёт до 30 с: отзыв ключа на других инстансах может занять до 30 с.
-- Депозиты, выводы, уведомления, сверка, Kubernetes и админка это следующие фазы ([PROGRESS.md](PROGRESS.md)).
+- Выводы, уведомления, сверка, Kubernetes и админка это следующие фазы ([PROGRESS.md](PROGRESS.md)).
+- Адреса депозита на девнетах только принимают: сид для dev-xpub не сохранялся (ADR 0009). ETH, присланный контрактом (внутренний вызов), не обнаруживается. Реорг глубже порога не откатывается автоматически, а репортится метрикой (ADR 0010).
 - Подтверждение почты в локальной сборке отключено (`IDENTITY_AUTO_VERIFY=true`) до появления notifier.
 - Postgres и Kafka локально в одном экземпляре, без репликации.
 
