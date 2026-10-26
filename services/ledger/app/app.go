@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -17,6 +20,7 @@ import (
 
 	"github.com/tickless/ledger/internal/store"
 	"github.com/tickless/ledger/migrations"
+	chainwatcherv1 "github.com/tickless/pkg/gen/tickless/chainwatcher/v1"
 	commonv1 "github.com/tickless/pkg/gen/tickless/common/v1"
 	ledgerv1 "github.com/tickless/pkg/gen/tickless/ledger/v1"
 	matchingv1 "github.com/tickless/pkg/gen/tickless/matching/v1"
@@ -102,8 +106,66 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 		return err
 	})
+	deposits := newDepositHandler(st)
+	g.Go(func() error {
+		err := kafka.Consume(gctx, kafka.ConsumerConfig{Brokers: brokers, Group: "ledger-deposits", Topics: []string{"deposits.events"}}, deposits.handle)
+		if errors.Is(err, context.Canceled) {
+			return nil
+		}
+		return err
+	})
 	g.Go(func() error { return svc.ServeGRPC(gctx, cfg.GRPCAddr, grpcSrv) })
 	return g.Wait()
+}
+
+// depositHandler credits CONFIRMED deposits from deposits.events. Idempotent
+// by store.DepositKey, so redelivered or duplicated events credit once.
+type depositHandler struct {
+	st  *store.Store
+	lag metric.Float64Histogram
+}
+
+func newDepositHandler(st *store.Store) *depositHandler {
+	h := &depositHandler{st: st}
+	h.lag, _ = otel.Meter("tickless/ledger").Float64Histogram("deposit_credit_lag_seconds",
+		metric.WithDescription("Time from chainwatcher confirming a deposit to the ledger crediting it"),
+		metric.WithExplicitBucketBoundaries(0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60))
+	return h
+}
+
+func (h *depositHandler) handle(ctx context.Context, recs []*kgo.Record) error {
+	for _, r := range recs {
+		var ev chainwatcherv1.DepositEvent
+		if err := proto.Unmarshal(r.Value, &ev); err != nil {
+			slog.Error("dropping undecodable deposit event", "partition", r.Partition, "offset", r.Offset, "err", err)
+			continue
+		}
+		if ev.Type != chainwatcherv1.DepositEventType_DEPOSIT_EVENT_TYPE_CONFIRMED {
+			continue // DETECTED / REORGED move no money
+		}
+		rctx := kafka.ExtractContext(ctx, r)
+		amt, err := money.ParseInt128(ev.GetAmount().GetUnits())
+		if err == nil && ev.UserId <= 0 {
+			err = errors.New("user id must be positive")
+		}
+		if err != nil {
+			// Never skip money silently: stall the partition and alert.
+			return kafka.Permanent(fmt.Errorf("deposit %s:%s:%d: invalid event (user %d, amount %q): %w", ev.Chain, ev.Txid, ev.Index, ev.UserId, ev.GetAmount().GetUnits(), err))
+		}
+		_, already, err := h.st.Deposit(rctx, ev.Chain, ev.Txid, ev.Index, ev.UserId, ev.Asset, amt)
+		if errors.Is(err, store.ErrInvalidAmount) {
+			return kafka.Permanent(fmt.Errorf("deposit %s:%s:%d: %w", ev.Chain, ev.Txid, ev.Index, err))
+		}
+		if err != nil {
+			return err // transient: retried
+		}
+		if !already && ev.GetMeta().GetProducedAtUnixNano() > 0 {
+			lag := time.Since(time.Unix(0, ev.Meta.ProducedAtUnixNano)).Seconds()
+			h.lag.Record(rctx, lag, metric.WithAttributes(attribute.String("chain", ev.Chain)))
+			slog.InfoContext(rctx, "deposit credited", "chain", ev.Chain, "txid", ev.Txid, "index", ev.Index, "user", ev.UserId, "asset", ev.Asset, "lag_s", lag)
+		}
+	}
+	return nil
 }
 
 func handleEvents(ctx context.Context, st *store.Store, markets store.MarketLookup, recs []*kgo.Record) error {
