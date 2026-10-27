@@ -6,7 +6,7 @@ MODULES := $(shell sed -n 's|^\s*\./\(.*\)$$|\1|p; s|^use \./\(.*\)$$|\1|p' go.w
 HAS_CC := $(shell command -v gcc >/dev/null 2>&1 && echo 1)
 GO_IMAGE := golang:1.27
 
-.PHONY: help test test-integration lint lint-alerts proto up down logs ps fuzz bench e2e chaos-dup seed web-install web-test web-build web-dev
+.PHONY: help test test-integration lint lint-alerts proto up down logs ps docs-c4 fuzz bench e2e chaos-dup seed web-install web-test web-build web-dev
 
 help:
 	@grep -E '^[a-z-]+:' Makefile | cut -d: -f1 | tr '\n' ' '; echo
@@ -89,3 +89,7 @@ logs:
 
 ps:
 	$(COMPOSE) ps
+
+docs-c4: ## regenerate the C4 diagrams in docs/c4 (Python only, no network)
+	python tools/docs-diagrams/c4.py
+	python tools/docs-diagrams/check-labels.py

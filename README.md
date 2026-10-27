@@ -99,21 +99,21 @@ curl -s -XPOST localhost:8080/v1/orders -H "Authorization: Bearer $TOKEN" \
 
 ### Диаграммы
 
-**C4 — архитектура Tickless.** Три уровня: контекст, контейнеры, развёртывание. Исходники `.drawio` лежат в [docs/c4/](docs/c4/).
+**C4 — архитектура Tickless.** Три уровня: контекст, контейнеры, развёртывание. Файлы `.drawio.svg` открываются в draw.io и правятся там; схемы генерирует [tools/docs-diagrams/c4.py](tools/docs-diagrams/c4.py) (`make docs-c4`).
 
 **Контекст.** Кто пользуется биржей и с какими внешними системами она говорит.
 
-<a href="docs/c4/01_context.png"><img src="docs/c4/01_context.png" alt="C4: контекст системы"></a>
+[![C4: контекст системы](docs/c4/c4-context.drawio.svg)](docs/c4/c4-context.drawio.svg)
 
-**Контейнеры.** Сервисы, хранилища и очереди, протоколы между ними.
+**Контейнеры.** Сервисы по сетевым сегментам, хранилища, очереди и протоколы между ними.
 
-<a href="docs/c4/02_containers.png"><img src="docs/c4/02_containers.png" alt="C4: контейнеры"></a>
+[![C4: контейнеры](docs/c4/c4-containers.drawio.svg)](docs/c4/c4-containers.drawio.svg)
 
 **Развёртывание.** Что запускает `make up`, с портами хоста.
 
-<a href="docs/c4/03_deployment.png"><img src="docs/c4/03_deployment.png" alt="C4: развёртывание"></a>
+[![C4: развёртывание](docs/c4/c4-deployment.drawio.svg)](docs/c4/c4-deployment.drawio.svg)
 
-Нажмите на картинку, чтобы открыть её в полном размере.
+Схемы открываются в полном размере по щелчку.
 
 ### Жизненный цикл ордера
 
