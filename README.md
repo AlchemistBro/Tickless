@@ -99,9 +99,19 @@ curl -s -XPOST localhost:8080/v1/orders -H "Authorization: Bearer $TOKEN" \
 
 ### Диаграммы
 
-**C4 — архитектура Tickless.** Исходники `.drawio` лежат в [docs/c4/](docs/c4/).
+**C4 — архитектура Tickless.** Три уровня: контекст, контейнеры, развёртывание. Исходники в SVG лежат в [docs/c4/](docs/c4/).
 
-<a href="docs/c4/01_deployment.png"><img src="docs/c4/01_deployment.png" alt="C4: развёртывание"></a>
+**Контекст.** Кто пользуется биржей и с какими внешними системами она говорит.
+
+<a href="docs/c4/01_context.png"><img src="docs/c4/01_context.png" alt="C4: контекст системы"></a>
+
+**Контейнеры.** Сервисы, хранилища и очереди, протоколы между ними.
+
+<a href="docs/c4/02_containers.png"><img src="docs/c4/02_containers.png" alt="C4: контейнеры"></a>
+
+**Развёртывание.** Что запускает `make up`, с портами хоста.
+
+<a href="docs/c4/03_deployment.png"><img src="docs/c4/03_deployment.png" alt="C4: развёртывание"></a>
 
 Нажмите на картинку, чтобы открыть её в полном размере.
 
