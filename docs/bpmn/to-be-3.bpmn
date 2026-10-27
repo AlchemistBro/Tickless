@@ -2,11 +2,11 @@
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Defs" targetNamespace="http://tickless.example/bpmn" exporter="bpmnrows" exporterVersion="2">
   <bpmn:collaboration id="Collab">
     <bpmn:participant id="Pool_Partner" name="Профессиональный партнёр (бутик)" />
-    <bpmn:participant id="Pool_Main_r1" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарн… · ряд 1/5" processRef="Proc_P3_r1" />
-    <bpmn:participant id="Pool_Main_r2" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарн… · ряд 2/5" processRef="Proc_P3_r2" />
-    <bpmn:participant id="Pool_Main_r3" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарн… · ряд 3/5" processRef="Proc_P3_r3" />
-    <bpmn:participant id="Pool_Main_r4" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарн… · ряд 4/5" processRef="Proc_P3_r4" />
-    <bpmn:participant id="Pool_Main_r5" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарн… · ряд 5/5" processRef="Proc_P3_r5" />
+    <bpmn:participant id="Pool_Main_r1" name="TO BE · ряд 1/5" processRef="Proc_P3_r1" />
+    <bpmn:participant id="Pool_Main_r2" name="TO BE · ряд 2/5" processRef="Proc_P3_r2" />
+    <bpmn:participant id="Pool_Main_r3" name="TO BE · ряд 3/5" processRef="Proc_P3_r3" />
+    <bpmn:participant id="Pool_Main_r4" name="TO BE · ряд 4/5" processRef="Proc_P3_r4" />
+    <bpmn:participant id="Pool_Main_r5" name="TO BE · ряд 5/5" processRef="Proc_P3_r5" />
     <bpmn:messageFlow id="mf3" sourceRef="S5" targetRef="Pool_Partner" name="Запрос уточнений" />
     <bpmn:messageFlow id="mf4" sourceRef="Pool_Partner" targetRef="M1" name="Уточнённые данные" />
   </bpmn:collaboration>
@@ -308,13 +308,17 @@
     </bpmndi:BPMNShape>
     <bpmndi:BPMNEdge id="mf3_di" bpmnElement="mf3">
       <di:waypoint x="355" y="319" />
-      <di:waypoint x="355" y="60" />
-      <bpmndi:BPMNLabel><dc:Bounds x="359" y="303" width="96" height="14" /></bpmndi:BPMNLabel>
+      <di:waypoint x="355" y="307" />
+      <di:waypoint x="686" y="307" />
+      <di:waypoint x="686" y="60" />
+      <bpmndi:BPMNLabel><dc:Bounds x="365" y="287" width="122" height="14" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="mf4_di" bpmnElement="mf4">
-      <di:waypoint x="355" y="60" />
+      <di:waypoint x="686" y="60" />
+      <di:waypoint x="686" y="645" />
+      <di:waypoint x="355" y="645" />
       <di:waypoint x="355" y="657" />
-      <bpmndi:BPMNLabel><dc:Bounds x="359" y="44" width="102" height="14" /></bpmndi:BPMNLabel>
+      <bpmndi:BPMNLabel><dc:Bounds x="365" y="625" width="129" height="14" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="h1_di" bpmnElement="h1">
       <di:waypoint x="243" y="165" />

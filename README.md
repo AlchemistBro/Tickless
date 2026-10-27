@@ -85,8 +85,6 @@ curl -s -XPOST localhost:8080/v1/orders -H "Authorization: Bearer $TOKEN" \
 
 Система состоит из сервисов на Go. Каждый сервис владеет своей базой PostgreSQL, сервисы не читают чужие таблицы. Межсервисные команды идут по gRPC, события по Kafka через transactional outbox.
 
-![Контекст и контейнеры: as-is](docs/c4/02_services_as_is.png)
-
 | Сервис | Ответственность |
 |---|---|
 | `gateway` | публичный REST и WebSocket, JWT и HMAC, rate limit в Redis, idempotency |
@@ -99,7 +97,37 @@ curl -s -XPOST localhost:8080/v1/orders -H "Authorization: Bearer $TOKEN" \
 | `wallet` | адреса депозита из xpub (BIP84 для BTC, BIP44 для ETH), без приватных ключей; адрес выдаётся только после регистрации в chainwatcher |
 | `chainwatcher` | сканеры bitcoind и Anvil, подтверждения, откат к общему предку при реорге, события `deposits.events` через outbox |
 
-Подробные схемы C4 (развёртывание и сервисы, как есть и как должно быть) лежат в [docs/c4/](docs/c4/). Исходники `.drawio` открываются в draw.io.
+### Диаграммы
+
+**C4 — архитектура Tickless** (as-is и to-be, исходники `.drawio` в [docs/c4/](docs/c4/); для сервисов to-be есть только исходник [02_services_to_be.drawio](docs/c4/02_services_to_be.drawio), без PNG).
+
+<table>
+  <tr>
+    <td align="center" width="50%"><b>Развёртывание: as-is</b><br><a href="docs/c4/01_deployment_as_is.png"><img src="docs/c4/01_deployment_as_is.png" alt="C4: развёртывание as-is"></a></td>
+    <td align="center" width="50%"><b>Развёртывание: to-be</b><br><a href="docs/c4/01_deployment_to_be.png"><img src="docs/c4/01_deployment_to_be.png" alt="C4: развёртывание to-be"></a></td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2"><b>Сервисы: as-is</b><br><a href="docs/c4/02_services_as_is.png"><img src="docs/c4/02_services_as_is.png" alt="C4: сервисы as-is" width="75%"></a></td>
+  </tr>
+</table>
+
+**BPMN — бизнес-процесс «Подготовка и проверка товарных данных партнёров» (ООО «ОСКЕЛИ ГРУПП»).** Схемы разложены в несколько рядов шириной около 570 px, ряды связаны событиями «Переход к ряду / из ряда». Файлы `.bpmn` и описание: [docs/bpmn/](docs/bpmn/). Это учебная модель процесса, к бирже она не относится.
+
+<table>
+  <tr>
+    <td align="center" width="50%"><b>AS IS</b> (как есть, всё вручную)<br><a href="docs/bpmn/png/as-is.png"><img src="docs/bpmn/png/as-is.png" alt="BPMN AS IS"></a></td>
+    <td align="center" width="50%"><b>TO BE, часть 1</b> (приём реестра)<br><a href="docs/bpmn/png/to-be-1.png"><img src="docs/bpmn/png/to-be-1.png" alt="BPMN TO BE, часть 1"></a></td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><b>TO BE, часть 2</b> (нормализация и проверка)<br><a href="docs/bpmn/png/to-be-2.png"><img src="docs/bpmn/png/to-be-2.png" alt="BPMN TO BE, часть 2"></a></td>
+    <td align="center" width="50%"><b>TO BE, часть 3</b> (уточнение у партнёра)<br><a href="docs/bpmn/png/to-be-3.png"><img src="docs/bpmn/png/to-be-3.png" alt="BPMN TO BE, часть 3"></a></td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2"><b>TO BE, часть 4</b> (карточки, отчёт, передача в размещение)<br><a href="docs/bpmn/png/to-be-4.png"><img src="docs/bpmn/png/to-be-4.png" alt="BPMN TO BE, часть 4" width="50%"></a></td>
+  </tr>
+</table>
+
+Нажмите на картинку, чтобы открыть её в полном размере.
 
 ### Жизненный цикл ордера
 

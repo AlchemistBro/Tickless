@@ -2,9 +2,9 @@
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Defs" targetNamespace="http://tickless.example/bpmn" exporter="bpmnrows" exporterVersion="2">
   <bpmn:collaboration id="Collab">
     <bpmn:participant id="Pool_Adj" name="Смежный процесс: размещение ассортимента на платформе" />
-    <bpmn:participant id="Pool_Main_r1" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарн… · ряд 1/3" processRef="Proc_P4_r1" />
-    <bpmn:participant id="Pool_Main_r2" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарн… · ряд 2/3" processRef="Proc_P4_r2" />
-    <bpmn:participant id="Pool_Main_r3" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарн… · ряд 3/3" processRef="Proc_P4_r3" />
+    <bpmn:participant id="Pool_Main_r1" name="TO BE · ряд 1/3" processRef="Proc_P4_r1" />
+    <bpmn:participant id="Pool_Main_r2" name="TO BE · ряд 2/3" processRef="Proc_P4_r2" />
+    <bpmn:participant id="Pool_Main_r3" name="TO BE · ряд 3/3" processRef="Proc_P4_r3" />
     <bpmn:messageFlow id="mf5" sourceRef="E4" targetRef="Pool_Adj" name="Позиции, готовые к публикации" />
   </bpmn:collaboration>
   <bpmn:process id="Proc_P4_r1" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарных данных (TO BE) · ряд 1" isExecutable="false">
@@ -157,8 +157,10 @@
     </bpmndi:BPMNShape>
     <bpmndi:BPMNEdge id="mf5_di" bpmnElement="mf5">
       <di:waypoint x="355" y="712" />
-      <di:waypoint x="355" y="60" />
-      <bpmndi:BPMNLabel><dc:Bounds x="359" y="696" width="174" height="14" /></bpmndi:BPMNLabel>
+      <di:waypoint x="355" y="700" />
+      <di:waypoint x="686" y="700" />
+      <di:waypoint x="686" y="60" />
+      <bpmndi:BPMNLabel><dc:Bounds x="365" y="680" width="213" height="14" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="k1_di" bpmnElement="k1">
       <di:waypoint x="243" y="165" />

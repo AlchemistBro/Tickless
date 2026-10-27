@@ -3,12 +3,12 @@
   <bpmn:collaboration id="Collab">
     <bpmn:participant id="Pool_Partner" name="Профессиональный партнёр (бутик)" />
     <bpmn:participant id="Pool_Place" name="Процесс размещения ассортимента" />
-    <bpmn:participant id="Pool_Main_r1" name="ООО «ОСКЕЛИ ГРУПП» · AS IS · ряд 1/6" processRef="Proc_AS_r1" />
-    <bpmn:participant id="Pool_Main_r2" name="ООО «ОСКЕЛИ ГРУПП» · AS IS · ряд 2/6" processRef="Proc_AS_r2" />
-    <bpmn:participant id="Pool_Main_r3" name="ООО «ОСКЕЛИ ГРУПП» · AS IS · ряд 3/6" processRef="Proc_AS_r3" />
-    <bpmn:participant id="Pool_Main_r4" name="ООО «ОСКЕЛИ ГРУПП» · AS IS · ряд 4/6" processRef="Proc_AS_r4" />
-    <bpmn:participant id="Pool_Main_r5" name="ООО «ОСКЕЛИ ГРУПП» · AS IS · ряд 5/6" processRef="Proc_AS_r5" />
-    <bpmn:participant id="Pool_Main_r6" name="ООО «ОСКЕЛИ ГРУПП» · AS IS · ряд 6/6" processRef="Proc_AS_r6" />
+    <bpmn:participant id="Pool_Main_r1" name="AS IS · ряд 1/6" processRef="Proc_AS_r1" />
+    <bpmn:participant id="Pool_Main_r2" name="AS IS · ряд 2/6" processRef="Proc_AS_r2" />
+    <bpmn:participant id="Pool_Main_r3" name="AS IS · ряд 3/6" processRef="Proc_AS_r3" />
+    <bpmn:participant id="Pool_Main_r4" name="AS IS · ряд 4/6" processRef="Proc_AS_r4" />
+    <bpmn:participant id="Pool_Main_r5" name="AS IS · ряд 5/6" processRef="Proc_AS_r5" />
+    <bpmn:participant id="Pool_Main_r6" name="AS IS · ряд 6/6" processRef="Proc_AS_r6" />
     <bpmn:messageFlow id="m1" sourceRef="Pool_Partner" targetRef="St" name="Реестр ассортимента (файл по почте)" />
     <bpmn:messageFlow id="m2" sourceRef="T7" targetRef="Pool_Partner" name="Запрос уточнения" />
     <bpmn:messageFlow id="m3" sourceRef="Pool_Partner" targetRef="CE" name="Ответ партнёра" />
@@ -373,24 +373,32 @@
       <dc:Bounds x="77" y="2257" width="36" height="36" />
     </bpmndi:BPMNShape>
     <bpmndi:BPMNEdge id="m1_di" bpmnElement="m1">
-      <di:waypoint x="225" y="60" />
+      <di:waypoint x="686" y="60" />
+      <di:waypoint x="686" y="135" />
+      <di:waypoint x="225" y="135" />
       <di:waypoint x="225" y="147" />
-      <bpmndi:BPMNLabel><dc:Bounds x="229" y="44" width="210" height="14" /></bpmndi:BPMNLabel>
+      <bpmndi:BPMNLabel><dc:Bounds x="235" y="115" width="255" height="14" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="m2_di" bpmnElement="m2">
       <di:waypoint x="225" y="1789" />
-      <di:waypoint x="225" y="60" />
-      <bpmndi:BPMNLabel><dc:Bounds x="229" y="1773" width="96" height="14" /></bpmndi:BPMNLabel>
+      <di:waypoint x="225" y="1777" />
+      <di:waypoint x="686" y="1777" />
+      <di:waypoint x="686" y="60" />
+      <bpmndi:BPMNLabel><dc:Bounds x="235" y="1757" width="122" height="14" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="m3_di" bpmnElement="m3">
-      <di:waypoint x="355" y="60" />
+      <di:waypoint x="686" y="60" />
+      <di:waypoint x="686" y="1805" />
+      <di:waypoint x="355" y="1805" />
       <di:waypoint x="355" y="1817" />
-      <bpmndi:BPMNLabel><dc:Bounds x="359" y="44" width="84" height="14" /></bpmndi:BPMNLabel>
+      <bpmndi:BPMNLabel><dc:Bounds x="365" y="1785" width="108" height="14" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="m4_di" bpmnElement="m4">
       <di:waypoint x="355" y="2293" />
-      <di:waypoint x="355" y="2410" />
-      <bpmndi:BPMNLabel><dc:Bounds x="359" y="2277" width="108" height="14" /></bpmndi:BPMNLabel>
+      <di:waypoint x="355" y="2305" />
+      <di:waypoint x="686" y="2305" />
+      <di:waypoint x="686" y="2410" />
+      <bpmndi:BPMNLabel><dc:Bounds x="365" y="2285" width="136" height="14" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="f1_di" bpmnElement="f1">
       <di:waypoint x="243" y="165" />
@@ -460,7 +468,7 @@
       <di:waypoint x="209" y="1065" />
       <di:waypoint x="209" y="1010" />
       <di:waypoint x="305" y="1010" />
-      <bpmndi:BPMNLabel><dc:Bounds x="117" y="1049" width="108" height="14" /></bpmndi:BPMNLabel>
+      <bpmndi:BPMNLabel><dc:Bounds x="117" y="1049" width="136" height="14" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="SFT0_6_di" bpmnElement="SFT0_6">
       <di:waypoint x="380" y="1450" />

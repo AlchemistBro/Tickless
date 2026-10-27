@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Defs" targetNamespace="http://tickless.example/bpmn" exporter="bpmnrows" exporterVersion="2">
   <bpmn:collaboration id="Collab">
-    <bpmn:participant id="Pool_Main_r1" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарн… · ряд 1/6" processRef="Proc_P2_r1" />
-    <bpmn:participant id="Pool_Main_r2" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарн… · ряд 2/6" processRef="Proc_P2_r2" />
-    <bpmn:participant id="Pool_Main_r3" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарн… · ряд 3/6" processRef="Proc_P2_r3" />
-    <bpmn:participant id="Pool_Main_r4" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарн… · ряд 4/6" processRef="Proc_P2_r4" />
-    <bpmn:participant id="Pool_Main_r5" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарн… · ряд 5/6" processRef="Proc_P2_r5" />
-    <bpmn:participant id="Pool_Main_r6" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарн… · ряд 6/6" processRef="Proc_P2_r6" />
+    <bpmn:participant id="Pool_Main_r1" name="TO BE · ряд 1/6" processRef="Proc_P2_r1" />
+    <bpmn:participant id="Pool_Main_r2" name="TO BE · ряд 2/6" processRef="Proc_P2_r2" />
+    <bpmn:participant id="Pool_Main_r3" name="TO BE · ряд 3/6" processRef="Proc_P2_r3" />
+    <bpmn:participant id="Pool_Main_r4" name="TO BE · ряд 4/6" processRef="Proc_P2_r4" />
+    <bpmn:participant id="Pool_Main_r5" name="TO BE · ряд 5/6" processRef="Proc_P2_r5" />
+    <bpmn:participant id="Pool_Main_r6" name="TO BE · ряд 6/6" processRef="Proc_P2_r6" />
 
   </bpmn:collaboration>
   <bpmn:process id="Proc_P2_r1" name="ООО «ОСКЕЛИ ГРУПП»: подготовка и проверка товарных данных (TO BE) · ряд 1" isExecutable="false">
